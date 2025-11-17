@@ -1,0 +1,32 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write # Required for OIDC trusted publishing authentication
+  contents: read # Required to clone repository
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Required to fetch all tags for git operations
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.5.0'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@my-dummy-org'
+
+      - name: Set package version from git tag
+        run: npm version from-git --no-git-tag-version
+
+      - name: Publish package
+        run: npm publish
