@@ -114,17 +114,19 @@ jobs:
 
       - name: Create version branch
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          ${{ steps.read-version.outputs.new_version != null &&
+            steps.import-gpg.outputs.keyid != null }}
         shell: bash
         run: git checkout -b ${{ env.VERSON_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
       - name: Stage all files
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          ${{ steps.read-version.outputs.new_version != null &&
+            steps.import-gpg.outputs.keyid != null }}
         shell: bash
         run: git add .
 
@@ -133,22 +135,29 @@ jobs:
         if: ${{ steps.read-version.outputs.new_version != null }}
         # Continue only with resolved GPG key
         if: ${{ steps.import-gpg.outputs.keyid != null }}
+        # Continue only with new semver version number
+        # Continue only with resolved GPG key
+        if: |
+          ${{ steps.read-version.outputs.new_version != null &&
+            steps.import-gpg.outputs.keyid != null }}
         shell: bash
         run: git commit -S -m "Version bump to v${{ steps.read-version.outputs.new_version }}"
 
       - name: Push branch and commtis
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          ${{ steps.read-version.outputs.new_version != null &&
+            steps.import-gpg.outputs.keyid != null }}
         shell: bash
         run: git push -u origin ${{ env.BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
       - name: Create Pull Request
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          ${{ steps.read-version.outputs.new_version != null &&
+            steps.import-gpg.outputs.keyid != null }}
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |

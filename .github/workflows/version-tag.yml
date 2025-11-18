@@ -1,7 +1,7 @@
 # Pushes new git version tag parsed from package.json file merged to main branch by version-files PR
 
 # Pipeline:
-# 1. Triggered by package.json push to main from PR with version-files label merge commit 
+# 1. Triggered by package.json push to main from PR with version-files label merge commit
 # 2. Retrieves merged PR label
 # 3. Checks label against version-label
 # 4. Reads version from package.json
@@ -67,7 +67,7 @@ jobs:
         run: |
           new_version=$(npm pkg get version | tr -d '"')
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
-      
+
       - name: Import GPG key
         id: import-gpg
         # Continue only with new semver version number
@@ -89,9 +89,10 @@ jobs:
 
       - name: Create new git version tag
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          ${{ steps.read-version.outputs.new_version != null &&
+            steps.import-gpg.outputs.keyid != null }}
         shell: bash
         run: |
           tag=v${{ steps.read-version.outputs.new_version }}
@@ -100,9 +101,10 @@ jobs:
 
       - name: Push tag
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          ${{ steps.read-version.outputs.new_version != null &&
+            steps.import-gpg.outputs.keyid != null }}
         shell: bash
         run: |
           tag=v${{ steps.read-version.outputs.new_version }}
