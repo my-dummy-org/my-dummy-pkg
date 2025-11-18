@@ -1,4 +1,14 @@
-name: Publish Package
+# Publishes package to registry (GitHub) on git version tag push
+
+# Pipeline:
+# 1. Triggered by tag push
+# 2. Set up publish to registry
+# 3. Publishes to registry
+
+# Requirements:
+# - secrets.ORG_SCOPE
+
+name: Publish npm package
 
 on:
   push:
@@ -8,9 +18,10 @@ on:
 permissions:
   id-token: write # Required for OIDC trusted publishing authentication
   contents: read # Required to clone repository
+  packages: write # Required to publish npm package to GitHub package registry
 
 jobs:
-  publish:
+  publish-github-package:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,11 +33,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24.5.0'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@my-dummy-org'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: ${{ secrets.ORG_SCOPE }}
 
-      - name: Set package version from git tag
-        run: npm version from-git --no-git-tag-version
-
-      - name: Publish package
+      - name: Publish to GitHub Packages
         run: npm publish

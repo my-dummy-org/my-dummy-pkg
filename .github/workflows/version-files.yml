@@ -1,0 +1,160 @@
+# Bumps version in files and creates PR when a PR with version label is merged to main
+
+# Pipeline:
+# 1. Triggered on push to main (only PR merge commits if main branch is protected)
+# 2. Retrieves merged PR labels to resolve semver level
+# 3. Resolved semver level passed to `npm version` command to resolve and set (in package.json) version number
+# 4. Resolved version number used to create git version branch
+# 5. Commits updated files (package.json) to version branch
+# 6. Pushes version branch to remote origin (GitHub)
+# 7. Creates Pull Request for that pushed version branch
+
+# Requirements:
+# - required labels: major, minor, patch, version-files
+# - merged PR must have assigned label: major | minor | patch
+# - secrets.PAT_TOKEN
+# - secrets.GPG_PRIVATE_KEY
+# - secrets.PASSPHRASE
+# - secrets.USER_EMAIL
+# - secrets.USER_NAME
+
+name: Bump version in files
+
+on:
+  push:
+    tags-ignore:
+      - '*' # Do not run on pushed tags
+    branches:
+      - main # Run only on push to main
+
+permissions:
+  id-token: write # Required for OIDC trusted publishing authentication
+  contents: write # Required to push a new tag
+  pull-requests: write # Required to create PR to push branch with new version files
+
+jobs:
+  version-tag:
+    runs-on: ubuntu-latest
+
+    env:
+      MAIN_BRANCH: 'main'
+      VERSON_BRANCH_PREFIX: 'version/v'
+      VERSION_FILES_LABEL: 'version-files'
+
+    steps:
+      - name: Get merged PR
+        id: get-merged-pull-request
+        uses: actions-ecosystem/action-get-merged-pull-request@v1
+        with:
+          github_token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Resolve semver level from PR labels
+        id: release-label
+        # Continue only if PR has labels
+        if: ${{ steps.get-merged-pull-request.outputs.labels != null }}
+        uses: actions-ecosystem/action-release-label@v1
+        with:
+          # Disable default prefix for labels (release/major -> major)
+          label_prefix: ''
+          # Labels (separated with line breaks):
+          #   - major
+          #   - minor
+          #   - patch
+          labels: ${{ steps.get-merged-pull-request.outputs.labels }}
+
+      - name: Checkout code
+        # Continue only with resolved semver level from PR
+        if: ${{ steps.release-label.outputs.level != null }}
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Setup NodeJS
+        # Continue only with resolved semver level from PR
+        if: ${{ steps.release-label.outputs.level != null }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.5.0'
+
+      - name: Resolve and set version in package.json
+        # Continue only with resolved semver level from PR
+        if: ${{ steps.release-label.outputs.level != null }}
+        # Resolve new version number using semver level and set it in package.json
+        # --no-git-tag-version to disable git commit and tag generation (only supports manual signing)
+        run: npm version ${{ steps.release-label.outputs.level }} --no-git-tag-version
+
+      - name: Read version from package.json
+        id: read-version
+        # Continue only with resolved semver level from PR
+        if: ${{ steps.release-label.outputs.level != null }}
+        shell: bash
+        run: |
+          new_version=$(npm pkg get version | tr -d '"')
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Import GPG key
+        id: import-gpg
+        # Continue only with new semver version number
+        if: ${{ steps.read-version.outputs.new_version != null }}
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          git_user_signingkey: true
+          git_tag_gpgsign: true
+
+      - name: Setup git credentials
+        # Continue only with resolved GPG key
+        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        shell: bash
+        run: |
+          git config user.email "${{ secrets.USER_EMAIL }}"
+          git config user.name "${{ secrets.USER_NAME }}"
+
+      - name: Create version branch
+        # Continue only with new semver version number
+        if: ${{ steps.read-version.outputs.new_version != null }}
+        # Continue only with resolved GPG key
+        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        shell: bash
+        run: git checkout -b ${{ env.VERSON_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
+
+      - name: Stage all files
+        # Continue only with new semver version number
+        if: ${{ steps.read-version.outputs.new_version != null }}
+        # Continue only with resolved GPG key
+        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        shell: bash
+        run: git add .
+
+      - name: Commit all files
+        # Continue only with new semver version number
+        if: ${{ steps.read-version.outputs.new_version != null }}
+        # Continue only with resolved GPG key
+        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        shell: bash
+        run: git commit -S -m "Version bump to v${{ steps.read-version.outputs.new_version }}"
+
+      - name: Push branch and commtis
+        # Continue only with new semver version number
+        if: ${{ steps.read-version.outputs.new_version != null }}
+        # Continue only with resolved GPG key
+        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        shell: bash
+        run: git push -u origin ${{ env.BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
+
+      - name: Create Pull Request
+        # Continue only with new semver version number
+        if: ${{ steps.read-version.outputs.new_version != null }}
+        # Continue only with resolved GPG key
+        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          gh pr create \
+            --base ${{ env.MAIN_BRANCH }} \
+            --label ${{ env.VERSION_FILES_LABEL }} \
+            --head ${{ env.BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }} \
+            --title "Version bump to v${{ steps.read-version.outputs.new_version }}" \
+            --body "Bump version in files to v${{ steps.read-version.outputs.new_version }}"
