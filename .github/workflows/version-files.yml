@@ -38,7 +38,7 @@ jobs:
 
     env:
       MAIN_BRANCH: 'main'
-      VERSON_BRANCH_PREFIX: 'version/v'
+      VERSION_BRANCH_PREFIX: 'version/v'
       VERSION_FILES_LABEL: 'version-files'
 
     steps:
@@ -126,7 +126,7 @@ jobs:
           steps.read-version.outputs.new_version != null &&
           steps.import-gpg.outputs.keyid != null
         shell: bash
-        run: git checkout -b ${{ env.VERSON_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
+        run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
       - name: Stage all files
         # Continue only with new semver version number
@@ -153,7 +153,7 @@ jobs:
           steps.read-version.outputs.new_version != null &&
           steps.import-gpg.outputs.keyid != null
         shell: bash
-        run: git push -u origin ${{ env.BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
+        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
       - name: Create Pull Request
         # Continue only with new semver version number
@@ -167,6 +167,6 @@ jobs:
           gh pr create \
             --base ${{ env.MAIN_BRANCH }} \
             --label ${{ env.VERSION_FILES_LABEL }} \
-            --head ${{ env.BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }} \
+            --head ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }} \
             --title "Version bump to v${{ steps.read-version.outputs.new_version }}" \
             --body "Bump version in files to v${{ steps.read-version.outputs.new_version }}"
