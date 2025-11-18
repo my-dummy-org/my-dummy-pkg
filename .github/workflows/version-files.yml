@@ -132,10 +132,6 @@ jobs:
 
       - name: Commit all files
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
-        # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
-        # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
           ${{ steps.read-version.outputs.new_version != null &&
