@@ -46,7 +46,8 @@ jobs:
 
       - name: Checkout code
         # Continue only if PR has version-files label
-        if: ${{ steps.get-merged-pull-request.outputs.labels == env.VERSION_FILES_LABEL }}
+        if: |
+          steps.get-merged-pull-request.outputs.labels == env.VERSION_FILES_LABEL
         uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Required to fetch all tags
@@ -54,7 +55,8 @@ jobs:
 
       - name: Setup NodeJS
         # Continue only if PR has version-files label
-        if: ${{ steps.get-merged-pull-request.outputs.labels == env.VERSION_FILES_LABEL }}
+        if: |
+          steps.get-merged-pull-request.outputs.labels == env.VERSION_FILES_LABEL
         uses: actions/setup-node@v6
         with:
           node-version: '24.5.0'
@@ -62,7 +64,8 @@ jobs:
       - name: Read version from package.json
         id: read-version
         # Continue only if PR has version-files label
-        if: ${{ steps.get-merged-pull-request.outputs.labels == env.VERSION_FILES_LABEL }}
+        if: |
+          steps.get-merged-pull-request.outputs.labels == env.VERSION_FILES_LABEL
         shell: bash
         run: |
           new_version=$(npm pkg get version | tr -d '"')
@@ -71,7 +74,8 @@ jobs:
       - name: Import GPG key
         id: import-gpg
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
+        if: |
+          steps.read-version.outputs.new_version != null
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -81,7 +85,8 @@ jobs:
 
       - name: Setup git credentials
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: |
           git config user.email "${{ secrets.USER_EMAIL }}"

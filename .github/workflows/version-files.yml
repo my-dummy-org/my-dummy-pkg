@@ -51,7 +51,8 @@ jobs:
       - name: Resolve semver level from PR labels
         id: release-label
         # Continue only if PR has labels
-        if: ${{ steps.get-merged-pull-request.outputs.labels != null }}
+        if: |
+          steps.get-merged-pull-request.outputs.labels != null
         uses: actions-ecosystem/action-release-label@v1
         with:
           # Disable default prefix for labels (release/major -> major)
@@ -64,7 +65,8 @@ jobs:
 
       - name: Checkout code
         # Continue only with resolved semver level from PR
-        if: ${{ steps.release-label.outputs.level != null }}
+        if: |
+          steps.release-label.outputs.level != null
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -72,14 +74,16 @@ jobs:
 
       - name: Setup NodeJS
         # Continue only with resolved semver level from PR
-        if: ${{ steps.release-label.outputs.level != null }}
+        if: |
+          steps.release-label.outputs.level != null
         uses: actions/setup-node@v6
         with:
           node-version: '24.5.0'
 
       - name: Resolve and set version in package.json
         # Continue only with resolved semver level from PR
-        if: ${{ steps.release-label.outputs.level != null }}
+        if: |
+          steps.release-label.outputs.level != null
         # Resolve new version number using semver level and set it in package.json
         # --no-git-tag-version to disable git commit and tag generation (only supports manual signing)
         run: npm version ${{ steps.release-label.outputs.level }} --no-git-tag-version
@@ -87,7 +91,8 @@ jobs:
       - name: Read version from package.json
         id: read-version
         # Continue only with resolved semver level from PR
-        if: ${{ steps.release-label.outputs.level != null }}
+        if: |
+          steps.release-label.outputs.level != null
         shell: bash
         run: |
           new_version=$(npm pkg get version | tr -d '"')
@@ -96,7 +101,8 @@ jobs:
       - name: Import GPG key
         id: import-gpg
         # Continue only with new semver version number
-        if: ${{ steps.read-version.outputs.new_version != null }}
+        if: |
+          steps.read-version.outputs.new_version != null
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -106,7 +112,8 @@ jobs:
 
       - name: Setup git credentials
         # Continue only with resolved GPG key
-        if: ${{ steps.import-gpg.outputs.keyid != null }}
+        if: |
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: |
           git config user.email "${{ secrets.USER_EMAIL }}"
