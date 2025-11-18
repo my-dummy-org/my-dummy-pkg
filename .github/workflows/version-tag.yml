@@ -91,8 +91,8 @@ jobs:
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          ${{ steps.read-version.outputs.new_version != null &&
-            steps.import-gpg.outputs.keyid != null }}
+          steps.read-version.outputs.new_version != null &&
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: |
           tag=v${{ steps.read-version.outputs.new_version }}
@@ -103,8 +103,8 @@ jobs:
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          ${{ steps.read-version.outputs.new_version != null &&
-            steps.import-gpg.outputs.keyid != null }}
+          steps.read-version.outputs.new_version != null &&
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: |
           tag=v${{ steps.read-version.outputs.new_version }}

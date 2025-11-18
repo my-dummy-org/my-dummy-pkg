@@ -33,7 +33,7 @@ permissions:
   pull-requests: write # Required to create PR to push branch with new version files
 
 jobs:
-  version-tag:
+  version-files:
     runs-on: ubuntu-latest
 
     env:
@@ -116,8 +116,8 @@ jobs:
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          ${{ steps.read-version.outputs.new_version != null &&
-            steps.import-gpg.outputs.keyid != null }}
+          steps.read-version.outputs.new_version != null &&
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: git checkout -b ${{ env.VERSON_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
@@ -125,8 +125,8 @@ jobs:
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          ${{ steps.read-version.outputs.new_version != null &&
-            steps.import-gpg.outputs.keyid != null }}
+          steps.read-version.outputs.new_version != null &&
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: git add .
 
@@ -134,8 +134,8 @@ jobs:
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          ${{ steps.read-version.outputs.new_version != null &&
-            steps.import-gpg.outputs.keyid != null }}
+          steps.read-version.outputs.new_version != null &&
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: git commit -S -m "Version bump to v${{ steps.read-version.outputs.new_version }}"
 
@@ -143,8 +143,8 @@ jobs:
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          ${{ steps.read-version.outputs.new_version != null &&
-            steps.import-gpg.outputs.keyid != null }}
+          steps.read-version.outputs.new_version != null &&
+          steps.import-gpg.outputs.keyid != null
         shell: bash
         run: git push -u origin ${{ env.BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
@@ -152,8 +152,8 @@ jobs:
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          ${{ steps.read-version.outputs.new_version != null &&
-            steps.import-gpg.outputs.keyid != null }}
+          steps.read-version.outputs.new_version != null &&
+          steps.import-gpg.outputs.keyid != null
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
