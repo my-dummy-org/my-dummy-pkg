@@ -21,10 +21,11 @@ permissions:
   packages: write # Required to publish npm package to GitHub package registry
 
 jobs:
-  publish-github:
+  publish:
     runs-on: ubuntu-latest
 
     env:
+      NODE_VERSION: '24.5.0'
       NODE_AUTH_TOKEN: ${{ secrets.PAT_TOKEN }}
 
     steps:
@@ -33,10 +34,20 @@ jobs:
         with:
           fetch-depth: 0 # Required to fetch all tags for git operations
 
-      - name: Setup NodeJS
+      - name: Setup NodeJS with npm registry
         uses: actions/setup-node@v6
         with:
-          node-version: '24.5.0'
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          scope: ${{ secrets.ORG_SCOPE }}
+
+      - name: Publish package to npm registry
+        run: npm publish
+
+      - name: Setup NodeJS with GitHub package registry
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://npm.pkg.github.com'
           scope: ${{ secrets.ORG_SCOPE }}
 
