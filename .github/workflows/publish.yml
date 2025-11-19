@@ -21,7 +21,7 @@ permissions:
   packages: write # Required to publish npm package to GitHub package registry
 
 jobs:
-  publish-github-package:
+  publish-github:
     runs-on: ubuntu-latest
 
     env:
@@ -40,5 +40,19 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: ${{ secrets.ORG_SCOPE }}
 
-      - name: Publish to GitHub Packages
+      - name: Publish package to GitHub registry
         run: npm publish
+
+      - name: Create tarball
+        run: npm pack
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          files: ./*.tgz
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          make_latest: true
+          prerelease: false
+          draft: false
