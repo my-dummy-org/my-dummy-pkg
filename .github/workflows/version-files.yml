@@ -42,16 +42,28 @@ jobs:
       VERSION_FILES_LABEL: 'version-files'
 
     steps:
+      - name: Prepare GitHub bot app credentials
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Get merged PR
         id: get-merged-pull-request
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
         uses: actions-ecosystem/action-get-merged-pull-request@v1
         with:
-          github_token: ${{ secrets.PAT_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
 
       - name: Resolve semver level from PR labels
         id: release-label
+        # Continue only if has GitHub bot app token
         # Continue only if PR has labels
         if: |
+          steps.app-token.outputs.token != null &&
           steps.get-merged-pull-request.outputs.labels != null
         uses: actions-ecosystem/action-release-label@v1
         with:
@@ -64,25 +76,31 @@ jobs:
           labels: ${{ steps.get-merged-pull-request.outputs.labels }}
 
       - name: Checkout code
+        # Continue only if has GitHub bot app token
         # Continue only with resolved semver level from PR
         if: |
+          steps.app-token.outputs.token != null &&
           steps.release-label.outputs.level != null
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup NodeJS
+        # Continue only if has GitHub bot app token
         # Continue only with resolved semver level from PR
         if: |
+          steps.app-token.outputs.token != null &&
           steps.release-label.outputs.level != null
         uses: actions/setup-node@v6
         with:
           node-version: '24.5.0'
 
       - name: Resolve and set version in package.json
+        # Continue only if has GitHub bot app token
         # Continue only with resolved semver level from PR
         if: |
+          steps.app-token.outputs.token != null &&
           steps.release-label.outputs.level != null
         # Resolve new version number using semver level and set it in package.json
         # --no-git-tag-version to disable git commit and tag generation (only supports manual signing)
@@ -90,77 +108,88 @@ jobs:
 
       - name: Read version from package.json
         id: read-version
+        # Continue only if has GitHub bot app token
         # Continue only with resolved semver level from PR
         if: |
+          steps.app-token.outputs.token != null &&
           steps.release-label.outputs.level != null
         shell: bash
         run: |
           new_version=$(npm pkg get version | tr -d '"')
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
-      - name: Import GPG key
-        id: import-gpg
+      - name: Get GitHub App User ID
+        id: get-app-user-id
+        # Continue only if has GitHub bot app token
         # Continue only with new semver version number
+        # Continue only with resolved GPG key
         if: |
+          steps.app-token.outputs.token != null &&
           steps.read-version.outputs.new_version != null
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          git_user_signingkey: true
-          git_tag_gpgsign: true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          app_user_id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
+          echo "app_user_id=$app_user_id" >> $GITHUB_OUTPUT
 
       - name: Setup git credentials
-        # Continue only with resolved GPG key
-        if: |
-          steps.import-gpg.outputs.keyid != null
-        shell: bash
-        run: |
-          git config user.email "${{ secrets.USER_EMAIL }}"
-          git config user.name "${{ secrets.USER_NAME }}"
-
-      - name: Create version branch
+        # Continue only if has GitHub bot app token
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          steps.read-version.outputs.new_version != null &&
-          steps.import-gpg.outputs.keyid != null
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
+        run: |
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-app-user-id.outputs.app_user_id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+
+      - name: Create version branch
+        # Continue only if has GitHub bot app token
+        # Continue only with new semver version number
+        # Continue only with resolved GPG key
+        if: |
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
         shell: bash
         run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
       - name: Stage all files
+        # Continue only if has GitHub bot app token
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          steps.read-version.outputs.new_version != null &&
-          steps.import-gpg.outputs.keyid != null
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
         shell: bash
         run: git add .
 
       - name: Commit all files
+        # Continue only if has GitHub bot app token
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          steps.read-version.outputs.new_version != null &&
-          steps.import-gpg.outputs.keyid != null
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
         shell: bash
-        run: git commit -S -m "Version bump to v${{ steps.read-version.outputs.new_version }}"
+        run: git commit -m "Version bump to v${{ steps.read-version.outputs.new_version }}"
 
       - name: Push branch and commtis
+        # Continue only if has GitHub bot app token
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          steps.read-version.outputs.new_version != null &&
-          steps.import-gpg.outputs.keyid != null
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
         shell: bash
         run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
       - name: Create Pull Request
+        # Continue only if has GitHub bot app token
         # Continue only with new semver version number
         # Continue only with resolved GPG key
         if: |
-          steps.read-version.outputs.new_version != null &&
-          steps.import-gpg.outputs.keyid != null
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
