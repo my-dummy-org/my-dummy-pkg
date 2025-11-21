@@ -4,11 +4,10 @@ on:
   push:
     tags-ignore:
       - '*' # Do not run on pushed tags
-    branches-ignore:
-      - main # Run on push to any branch but main
   pull_request:
     branches:
       - main # Run on pull requests to main
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read # Required to clone repository
