@@ -23,7 +23,6 @@ permissions:
   contents: read # Required to clone repository
   id-token: write # Required for OIDC trusted publishing authentication
   packages: write # Required to publish to GitHub registry
-  attestations: write
 
 jobs:
   publish:
@@ -39,9 +38,6 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          permission-packages: write
-          permission-contents: write
-          permission-organization-packages: write
 
       - name: Checkout code
         # Continue only if has GitHub bot app token
@@ -82,7 +78,7 @@ jobs:
         if: |
           steps.app-token.outputs.token != null
         env:
-          NODE_AUTH_TOKEN: ${{ steps.app-token.outputs.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm publish
 
       - name: Create tarball
