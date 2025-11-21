@@ -7,7 +7,12 @@ on:
   pull_request:
     branches:
       - main # Run on pull requests to main
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
 
 permissions:
   contents: read # Required to clone repository
@@ -16,7 +21,6 @@ permissions:
 
 jobs:
   checks:
-    if: ${{ !startsWith(github.ref, 'refs/heads/version/') }}
     runs-on: ubuntu-latest
 
     env:
