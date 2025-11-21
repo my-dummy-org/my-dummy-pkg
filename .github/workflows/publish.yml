@@ -78,7 +78,7 @@ jobs:
         if: |
           steps.app-token.outputs.token != null
         env:
-          NODE_AUTH_TOKEN: ${{ steps.app-token.outputs.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm publish
 
       - name: Create tarball
