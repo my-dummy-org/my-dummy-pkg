@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   checks:
+    if: ${{ !startsWith(github.ref, 'refs/heads/version/') }}
     runs-on: ubuntu-latest
 
     env:
