@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Required to fetch all tags
 
       - name: Setup NodeJS
         uses: actions/setup-node@v6
@@ -41,18 +43,21 @@ jobs:
         if: |
           steps.read-old-version.outputs.old_version != null &&
           contains(github.event.pull_request.labels.*.name, 'major')
+        shell: bash
         run: npm version major --no-git-tag-version
 
       - name: Bump package version minor
         if: |
           steps.read-old-version.outputs.old_version != null &&
           contains(github.event.pull_request.labels.*.name, 'minor')
+        shell: bash
         run: npm version minor --no-git-tag-version
 
       - name: Bump package version patch
         if: |
           steps.read-old-version.outputs.old_version != null &&
           contains(github.event.pull_request.labels.*.name, 'patch')
+        shell: bash
         run: npm version patch --no-git-tag-version
 
       - name: Read new version from package.json
@@ -63,17 +68,16 @@ jobs:
           new_version=$(npm pkg get version | tr -d '"')
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
-      - name: Setup NodeJS with npm registry
+      - name: Check no tag exist
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@${{ github.repository_owner }}'
+        run: |
+          git show-ref --tags --verify --quiet "refs/tags/v${{ steps.read-new-version.outputs.new_version }}" || exit 1
 
-      - name: Try to publish package to npm registry
+      - name: Test no GitHub release exist
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
-        run: npm publish --dry-run
+        shell: bash
+        run: |
+          gh api repos/${{ github.repository }}/releases/tags/v${{ steps.read-new-version.outputs.new_version }} || exit 1
 
       - name: Setup NodeJS with GitHub package registry
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
@@ -83,8 +87,22 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@${{ github.repository_owner }}'
 
-      - name: Try to publish package to GitHub registry
+      - name: Test package publish to GitHub registry
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: npm publish --dry-run
+
+      - name: Setup NodeJS with npm registry
+        if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Test package publish to npm registry
+        if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
+        shell: bash
         run: npm publish --dry-run
