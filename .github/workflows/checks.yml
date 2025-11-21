@@ -73,12 +73,6 @@ jobs:
         run: |
           ! git show-ref --tags --verify --quiet "refs/tags/v${{ steps.read-new-version.outputs.new_version }}" || exit 1
 
-      - name: Test no GitHub release exist
-        if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
-        shell: bash
-        run: |
-          gh api repos/${{ github.repository }}/releases/tags/v${{ steps.read-new-version.outputs.new_version }} || exit 1
-
       - name: Setup NodeJS with GitHub package registry
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
         uses: actions/setup-node@v6
@@ -106,3 +100,20 @@ jobs:
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
         shell: bash
         run: npm publish --dry-run
+
+      - name: Prepare GitHub bot app credentials
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Test no GitHub release exist
+        if: |
+          steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version &&
+          steps.app-token.outputs.token != null
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          gh api repos/${{ github.repository }}/releases/tags/v${{ steps.read-new-version.outputs.new_version }} || exit 1
