@@ -153,6 +153,16 @@ jobs:
         shell: bash
         run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
+      - name: Push version branch
+        # Continue only if has GitHub bot app token
+        # Continue only with new semver version number
+        # Continue only with resolved GPG key
+        if: |
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
+        shell: bash
+        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
+
       # TODO:
 
       - name: Commit changes
@@ -164,16 +174,6 @@ jobs:
           message: 'Version bump to v${{ steps.read-version.outputs.new_version }}'
           files: |
             **
-
-      - name: Push branch and commtis
-        # Continue only if has GitHub bot app token
-        # Continue only with new semver version number
-        # Continue only with resolved GPG key
-        if: |
-          steps.app-token.outputs.token != null &&
-          steps.read-version.outputs.new_version != null
-        shell: bash
-        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
       - name: Create Pull Request
         # Continue only if has GitHub bot app token
