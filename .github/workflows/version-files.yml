@@ -153,25 +153,17 @@ jobs:
         shell: bash
         run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
-      - name: Stage all files
-        # Continue only if has GitHub bot app token
-        # Continue only with new semver version number
-        # Continue only with resolved GPG key
-        if: |
-          steps.app-token.outputs.token != null &&
-          steps.read-version.outputs.new_version != null
-        shell: bash
-        run: git add .
+      # TODO:
 
-      - name: Commit all files
-        # Continue only if has GitHub bot app token
-        # Continue only with new semver version number
-        # Continue only with resolved GPG key
-        if: |
-          steps.app-token.outputs.token != null &&
-          steps.read-version.outputs.new_version != null
-        shell: bash
-        run: git commit -m "Version bump to v${{ steps.read-version.outputs.new_version }}"
+      - name: Commit changes
+        uses: iarekylew00t/verified-bot-commit@v2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          auto-stage: true
+          ref: 'refs/heads/${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}'
+          message: 'Version bump to v${{ steps.read-version.outputs.new_version }}'
+          files: |
+            **
 
       - name: Push branch and commtis
         # Continue only if has GitHub bot app token
@@ -191,7 +183,7 @@ jobs:
           steps.app-token.outputs.token != null &&
           steps.read-version.outputs.new_version != null
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           gh pr create \
             --base ${{ env.MAIN_BRANCH }} \
