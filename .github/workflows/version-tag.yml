@@ -28,9 +28,6 @@ on:
     paths:
       - 'package.json' # Run only when package.json file is updated
 
-permissions:
-  contents: write # Required to push a new tag
-
 jobs:
   version-tag:
     runs-on: ubuntu-latest
