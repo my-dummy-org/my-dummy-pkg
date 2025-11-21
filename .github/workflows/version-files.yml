@@ -24,11 +24,6 @@ on:
     branches:
       - main # Run only on push to main
 
-permissions:
-  id-token: write # Required for OIDC trusted publishing authentication
-  contents: write # Required to push a new tag
-  pull-requests: write # Required to create PR to push branch with new version files
-
 jobs:
   version-files:
     runs-on: ubuntu-latest
