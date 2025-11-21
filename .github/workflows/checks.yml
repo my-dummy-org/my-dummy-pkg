@@ -71,7 +71,7 @@ jobs:
       - name: Check no tag exist
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
         run: |
-          git show-ref --tags --verify --quiet "refs/tags/v${{ steps.read-new-version.outputs.new_version }}" || exit 1
+          ! git show-ref --tags --verify --quiet "refs/tags/v${{ steps.read-new-version.outputs.new_version }}" || exit 1
 
       - name: Test no GitHub release exist
         if: ${{ steps.read-old-version.outputs.old_version != steps.read-new-version.outputs.new_version }}
