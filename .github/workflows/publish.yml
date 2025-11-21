@@ -22,6 +22,7 @@ on:
 permissions:
   id-token: write # Required for OIDC trusted publishing authentication
   contents: read # Required to clone repository
+  packages: write # Required to publish to GitHub registry
 
 jobs:
   publish:
