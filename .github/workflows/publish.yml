@@ -20,9 +20,10 @@ on:
       - 'v*'
 
 permissions:
-  id-token: write # Required for OIDC trusted publishing authentication
   contents: read # Required to clone repository
+  id-token: write # Required for OIDC trusted publishing authentication
   packages: write # Required to publish to GitHub registry
+  attestations: write
 
 jobs:
   publish:
@@ -41,6 +42,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           permission-packages: write
           permission-contents: write
+          permission-organization-packages: write
 
       - name: Checkout code
         # Continue only if has GitHub bot app token
