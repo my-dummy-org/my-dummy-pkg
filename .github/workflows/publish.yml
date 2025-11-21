@@ -38,6 +38,9 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-packages: write
+          permission-contents: write
 
       - name: Checkout code
         # Continue only if has GitHub bot app token
@@ -78,7 +81,7 @@ jobs:
         if: |
           steps.app-token.outputs.token != null
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: npm publish
 
       - name: Create tarball
