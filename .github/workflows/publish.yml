@@ -1,14 +1,18 @@
-# Publishes package to registry (GitHub) on git version tag push
+# Publishes package to registry (npm, GitHub) and to GitHub Releases on git version tag push
 
 # Pipeline:
 # 1. Triggered by tag push
-# 2. Set up publish to registry
-# 3. Publishes to registry
+# 2. Set up publish to npm registry
+# 3. Publishes to npm registry
+# 4. Set up publish to GitHub registry
+# 5. Publishes to GitHub registry
+# 6. Publishes to GitHub Releases
 
 # Requirements:
-# - secrets.ORG_SCOPE
+# - secrets.APP_ID
+# - secrets.APP_PRIVATE_KEY
 
-name: Publish npm package
+name: Publish package
 
 on:
   push:
@@ -26,15 +30,27 @@ jobs:
 
     env:
       NODE_VERSION: '24.5.0'
-      NODE_AUTH_TOKEN: ${{ secrets.PAT_TOKEN }}
 
     steps:
+      - name: Prepare GitHub bot app credentials
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout code
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
         uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Required to fetch all tags for git operations
 
       - name: Setup NodeJS with npm registry
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -42,9 +58,15 @@ jobs:
           scope: '@${{ github.repository_owner }}'
 
       - name: Publish package to npm registry
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
         run: npm publish
 
       - name: Setup NodeJS with GitHub package registry
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -52,15 +74,26 @@ jobs:
           scope: '@${{ github.repository_owner }}'
 
       - name: Publish package to GitHub registry
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: npm publish
 
       - name: Create tarball
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
         run: npm pack
 
       - name: Publish GitHub release
+        # Continue only if has GitHub bot app token
+        if: |
+          steps.app-token.outputs.token != null
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           files: ./*.tgz
           fail_on_unmatched_files: true
           generate_release_notes: true
