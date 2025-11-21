@@ -163,9 +163,13 @@ jobs:
         shell: bash
         run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ steps.read-version.outputs.new_version }}
 
-      # TODO:
-
       - name: Commit changes
+        # Continue only if has GitHub bot app token
+        # Continue only with new semver version number
+        # Continue only with resolved GPG key
+        if: |
+          steps.app-token.outputs.token != null &&
+          steps.read-version.outputs.new_version != null
         uses: iarekylew00t/verified-bot-commit@v2
         with:
           token: ${{ steps.app-token.outputs.token }}
