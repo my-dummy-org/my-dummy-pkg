@@ -7,7 +7,7 @@ on:
     - cron: '0 0 1 * *' # Once a month
 
 jobs:
-  checks:
+  scheduled-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -41,7 +41,7 @@ jobs:
           new_tags=()
           for tag in "${external_tags[@]}"; do
             if [[ ! " ${own_tags[@]} " =~ " ${tag} " ]]; then
-              NEW_TAGS+=($tag)
+              new_tags+=($tag)
             fi
           done
 
