@@ -106,18 +106,18 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: gifsicle-js
-          path: ./dist/gifsicle.js
+          path: ${{ github.workspace }}/dist/gifsicle.js
 
       - name: Check JS artifact downloaded
         shell: bash
-        run: test -f ./dist/gifsicle.js || exit 1
+        run: test -f ${{ github.workspace }}/dist/gifsicle.js || exit 1
 
       - name: Download WASM artifact
         uses: actions/download-artifact@v6
         with:
           name: gifsicle-wasm
-          path: ./dist/gifsicle.wasm
+          path: ${{ github.workspace }}/dist/gifsicle.wasm
 
       - name: Check WASM artifact downloaded
         shell: bash
-        run: test -f ./dist/gifsicle.wasm || exit 1
+        run: test -f ${{ github.workspace }}/dist/gifsicle.wasm || exit 1
