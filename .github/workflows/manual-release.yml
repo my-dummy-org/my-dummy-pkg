@@ -28,6 +28,14 @@ jobs:
       EMCC_CORES: 2 # Default for ubuntu-latest runner
 
     steps:
+      - name: APT update
+        shell: bash
+        run: apt-get update
+
+      - name: Install autoconf
+        shell: bash
+        run: apt-get install -y autoconf
+
       - name: Checkout gifsicle repository
         uses: actions/checkout@v6
         with:
