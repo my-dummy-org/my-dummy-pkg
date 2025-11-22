@@ -3,8 +3,6 @@ name: Scheduled release check
 on:
   # Trigger manually
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 1 * *' # Once a month
 
 jobs:
   scheduled-release:
