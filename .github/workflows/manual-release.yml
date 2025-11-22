@@ -1,0 +1,36 @@
+name: Scheduled release check
+
+on:
+  # Trigger manually
+  workflow_dispatch:
+    inputs:
+      gifsicle-version:
+        description: 'Gifsicle version to build'
+        required: true
+        type: string
+        default: '1.96'
+      emscripten-version:
+        description: 'Emscripten version to use'
+        required: true
+        type: string
+        default: '4.0.19'
+
+jobs:
+  scheduled-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout gifsicle repository
+        uses: actions/checkout@v6
+        with:
+          repository: 'kohler/gifsicle'
+          ref: 'v${{ github.event.inputs.gifsicle-version }}'
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ github.event.inputs.emscripten-version }}
+
+      - name: Run bootstrap script
+        shell: bash
+        run: ./bootstrap.sh
