@@ -21,6 +21,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    container:
+      image: emscripten/emsdk:${{ github.event.inputs.emscripten-version }}
+
     env:
       EMCC_CORES: 2 # Default for ubuntu-latest runner
 
@@ -39,11 +42,6 @@ jobs:
       - name: Copy closure externs
         shell: bash
         run: cp ./source/closure-externs.js ./closure-externs.js
-
-      - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: ${{ github.event.inputs.emscripten-version }}
 
       - name: Run bootstrap script
         shell: bash
