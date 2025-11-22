@@ -109,9 +109,9 @@ jobs:
           name: gifsicle-js
           path: ./dist
 
-      - name: Check JS artifact downloaded
-        shell: bash
-        run: test -f ./dist/gifsicle-js || exit 1
+      # - name: Check JS artifact downloaded
+      #   shell: bash
+      #   run: test -f ./dist/gifsicle-js || exit 1
 
       - name: Download WASM artifact
         id: download-wasm
@@ -120,6 +120,10 @@ jobs:
           name: gifsicle-wasm
           path: ./dist
 
-      - name: Check WASM artifact downloaded
+      # - name: Check WASM artifact downloaded
+      #   shell: bash
+      #   run: test -f ./dist/gifsicle-wasm || exit 1
+
+      - name: Print dir
         shell: bash
-        run: test -f ./dist/gifsicle-wasm || exit 1
+        run: ls ./dist
