@@ -25,17 +25,18 @@ jobs:
     steps:
       - name: Checkout gifsicle repository
         uses: actions/checkout@v6
-
-      - name: Checkout gifsicle repository
-        uses: actions/checkout@v6
         with:
           repository: 'kohler/gifsicle'
           ref: 'v${{ github.event.inputs.gifsicle-version }}'
-          path: gifsicle
+
+      - name: Checkout own repository
+        uses: actions/checkout@v6
+        with:
+          path: source
 
       - name: Copy closure externs
         shell: bash
-        run: cp ./closure-externs.js ./gifsicle/closure-externs.js
+        run: cp ./source/closure-externs.js ./closure-externs.js
 
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
@@ -44,21 +45,20 @@ jobs:
 
       - name: Run bootstrap script
         shell: bash
-        run: cd ./gifsicle && ./bootstrap.sh
+        run: ./bootstrap.sh
 
       - name: Emscripten configure
         shell: bash
-        run: cd ./gifsicle && emconfigure ./configure --disable-gifview --disable-gifdiff
+        run: emconfigure ./configure --disable-gifview --disable-gifdiff
 
       - name: Emscripten make
         shell: bash
-        run: cd ./gifsicle && emmake make
+        run: emmake make
 
       - name: Emscripten compile
         shell: bash
         run: |
-          cd ./gifsicle \
-          && emcc ./src/*.o -o ./src/gifsicle.js \
+          emcc ./src/*.o -o ./src/gifsicle.js \
             -g0 \
             -flto \
             -O3 \
