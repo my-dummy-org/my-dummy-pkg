@@ -1,4 +1,4 @@
-name: Scheduled release check
+name: Manual release
 
 on:
   # Trigger manually
@@ -37,10 +37,6 @@ jobs:
         shell: bash
         run: cp ./closure-externs.js ./gifsicle/closure-externs.js
 
-      - name: Set gifsicle workdir
-        shell: bash
-        run: cd ./gifsicle
-
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
         with:
@@ -48,34 +44,35 @@ jobs:
 
       - name: Run bootstrap script
         shell: bash
-        run: ./bootstrap.sh
+        run: cd ./gifsicle && ./bootstrap.sh
 
       - name: Emscripten configure
         shell: bash
-        run: emconfigure ./configure --disable-gifview --disable-gifdiff
+        run: cd ./gifsicle && emconfigure ./configure --disable-gifview --disable-gifdiff
 
       - name: Emscripten make
         shell: bash
-        run: emmake make
+        run: cd ./gifsicle && emmake make
 
       - name: Emscripten compile
         shell: bash
         run: |
-          emcc ./src/*.o -o ./src/gifsicle.js \
-          -g0 \
-          -flto \
-          -O3 \
-          --closure 1 \
-          --closure-args="--externs ./closure-externs.js" \
-          -s ENVIRONMENT=worker \
-          -s ALLOW_MEMORY_GROWTH=1 \
-          -s IGNORE_MISSING_MAIN=0 \
-          -s INVOKE_RUN=0 \
-          -s MODULARIZE=1 \
-          -s EXPORTED_RUNTIME_METHODS=FS,callMain \
-          -s INCOMING_MODULE_JS_API=locateFile,print,printErr \
-          -s EXPORT_NAME=createModule \
-          -s EXPORT_ES6=1
+          cd ./gifsicle \
+          && emcc ./src/*.o -o ./src/gifsicle.js \
+            -g0 \
+            -flto \
+            -O3 \
+            --closure 1 \
+            --closure-args="--externs ./closure-externs.js" \
+            -s ENVIRONMENT=worker \
+            -s ALLOW_MEMORY_GROWTH=1 \
+            -s IGNORE_MISSING_MAIN=0 \
+            -s INVOKE_RUN=0 \
+            -s MODULARIZE=1 \
+            -s EXPORTED_RUNTIME_METHODS=FS,callMain \
+            -s INCOMING_MODULE_JS_API=locateFile,print,printErr \
+            -s EXPORT_NAME=createModule \
+            -s EXPORT_ES6=1
 
       - name: Print result
         shell: bash
