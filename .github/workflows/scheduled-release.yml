@@ -1,0 +1,53 @@
+name: Scheduled release check
+
+on:
+  # Trigger manually
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *' # Once a month
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Required to fetch all tags
+
+      - name: Fetch own tags
+        id: own-tags
+        shell: bash
+        run: |
+          git fetch --tags
+          echo "tags=$(git tag --sort=version:refname | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Fetch external tags
+        id: external-tags
+        shell: bash
+        run: |
+          git clone --mirror https://github.com/kohler/gifsicle.git gifsicle
+          cd gifsicle
+          echo "tags=$(git tag --sort=version:refname | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Find new tags
+        id: new-tags
+        shell: bash
+        run: |
+          own_tags=${{ steps.own-tags.outputs.tags }}
+          external_tags=${{ steps.external-tags.outputs.tags }}
+
+          new_tags=()
+          for tag in "${external_tags[@]}"; do
+            if [[ ! " ${own_tags[@]} " =~ " ${tag} " ]]; then
+              NEW_TAGS+=($tag)
+            fi
+          done
+
+          echo "tags=${new_tags[*]}" >> $GITHUB_OUTPUT
+
+      - name: Print new tags
+        shell: bash
+        run: |
+          echo "${{ steps.new-tags.outputs.tags }}"
