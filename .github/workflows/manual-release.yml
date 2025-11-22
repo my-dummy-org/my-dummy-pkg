@@ -21,26 +21,18 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    container:
-      image: emscripten/emsdk:${{ github.event.inputs.emscripten-version }}
-
     env:
+      GS_VERSION: ${{ github.event.inputs.gifsicle-version }}
+      EM_VERSION: ${{ github.event.inputs.emscripten-version }}
+      EM_CACHE_FOLDER: 'emsdk-cache'
       EMCC_CORES: 2 # Default for ubuntu-latest runner
 
     steps:
-      - name: APT update
-        shell: bash
-        run: apt-get update
-
-      - name: Install autoconf
-        shell: bash
-        run: apt-get install -y autoconf
-
       - name: Checkout gifsicle repository
         uses: actions/checkout@v6
         with:
           repository: 'kohler/gifsicle'
-          ref: 'v${{ github.event.inputs.gifsicle-version }}'
+          ref: 'v${{ env.GS_VERSION }}'
 
       - name: Checkout own repository
         uses: actions/checkout@v6
@@ -50,6 +42,18 @@ jobs:
       - name: Copy closure externs
         shell: bash
         run: cp ./source/closure-externs.js ./closure-externs.js
+
+      - name: Setup cache
+        uses: actions/cache@v4
+        with:
+          path: ${{env.EM_CACHE_FOLDER}}
+          key: ${{env.EM_VERSION}}-${{ runner.os }}
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EM_VERSION }}
+          actions-cache-folder: ${{ env.EM_CACHE_FOLDER }}
 
       - name: Run bootstrap script
         shell: bash
