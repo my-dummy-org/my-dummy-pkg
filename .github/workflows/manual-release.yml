@@ -86,7 +86,7 @@ jobs:
       - name: Upload JS artifact
         uses: actions/upload-artifact@v5
         with:
-          name: gifsicle-wasm
+          name: gifsicle-js
           path: ./src/gifsicle.js
           if-no-files-found: error
           compression-level: 9
