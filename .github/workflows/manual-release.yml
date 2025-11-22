@@ -103,6 +103,7 @@ jobs:
 
     steps:
       - name: Download JS artifact
+        id: download-js
         uses: actions/download-artifact@v6
         with:
           name: gifsicle-js
@@ -110,9 +111,10 @@ jobs:
 
       - name: Check JS artifact downloaded
         shell: bash
-        run: test -f ${{ github.workspace }}/dist/gifsicle.js || exit 1
+        run: test -f ${{ steps.download-js.outputs.download-path }} || exit 1
 
       - name: Download WASM artifact
+        id: download-wasm
         uses: actions/download-artifact@v6
         with:
           name: gifsicle-wasm
@@ -120,4 +122,4 @@ jobs:
 
       - name: Check WASM artifact downloaded
         shell: bash
-        run: test -f ${{ github.workspace }}/dist/gifsicle.wasm || exit 1
+        run: test -f ${{ steps.download-wasm.outputs.download-path }} || exit 1
