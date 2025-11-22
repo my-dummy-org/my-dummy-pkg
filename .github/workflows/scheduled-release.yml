@@ -35,8 +35,8 @@ jobs:
         id: new-tags
         shell: bash
         run: |
-          own_tags=${{ steps.own-tags.outputs.tags }}
-          external_tags=${{ steps.external-tags.outputs.tags }}
+          own_tags=(${{ steps.own-tags.outputs.tags }})
+          external_tags=(${{ steps.external-tags.outputs.tags }})
 
           new_tags=()
           for tag in "${external_tags[@]}"; do
