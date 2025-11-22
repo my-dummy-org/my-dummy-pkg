@@ -16,7 +16,9 @@ on:
         default: '4.0.19'
 
 jobs:
-  manual-release:
+  build:
+    name: Build gifsicle artifacts
+
     runs-on: ubuntu-latest
 
     env:
@@ -91,3 +93,31 @@ jobs:
           if-no-files-found: error
           compression-level: 9
           overwrite: true
+
+  publish:
+    name: Publish gifsicle artifacts
+
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download JS artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: gifsicle-js
+          path: ./dist/gifsicle.js
+
+      - name: Check JS artifact downloaded
+        shell: bash
+        run: test -f ./dist/gifsicle.js || exit 1
+
+      - name: Download WASM artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: gifsicle-wasm
+          path: ./dist/gifsicle.wasm
+
+      - name: Check WASM artifact downloaded
+        shell: bash
+        run: test -f ./dist/gifsicle.wasm || exit 1
