@@ -74,9 +74,20 @@ jobs:
             -s EXPORT_NAME=createModule \
             -s EXPORT_ES6=1
 
-      - name: Print result
-        shell: bash
-        run: |
-          ls . && 
-          ls ./src &&
-          ls ./src/gifsicle
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: gifsicle-wasm
+          path: ./src/gifsicle.wasm
+          if-no-files-found: error
+          compression-level: 9
+          overwrite: true
+
+      - name: Upload JS artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: gifsicle-wasm
+          path: ./src/gifsicle.js
+          if-no-files-found: error
+          compression-level: 9
+          overwrite: true
