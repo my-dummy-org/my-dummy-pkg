@@ -13,16 +13,151 @@ on:
         description: 'Emscripten version to use'
         required: true
         type: string
-        default: '4.0.19'
+        default: '4.0.20'
+
+permissions:
+  contents: read # Required to clone repository
+  id-token: write # Required for OIDC trusted publishing authentication
+  packages: write # Required to publish to GitHub registry
+
+env:
+  GS_VERSION: ${{ github.event.inputs.gifsicle-version }}
+  GS_REPO: 'kohler/gifsicle'
+  NODE_VERSION: '24.5.0'
+  VERSION_FILES_LABEL: 'version-files'
+  VERSION_BRANCH_PREFIX: 'version/v'
+  MAIN_BRANCH: 'main'
 
 jobs:
+  prepare:
+    name: Prepare dependencies
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check gifsicle version tag exist
+        shell: bash
+        run: |
+          git ls-remote --exit-code \
+            https://github.com/${{ env.GS_REPO }}.git \
+            refs/tags/v${{ env.GS_VERSION }}
+
+      - name: Check no own version tag exist
+        shell: bash
+        run: |
+          ! git ls-remote --exit-code \
+              https://github.com/${{ github.repository }}.git \
+              refs/tags/v${{ env.GS_VERSION }}
+
+      - name: Check no own GitHub release exist
+        shell: bash
+        run: gh release view v${{ env.GS_VERSION }} --repo ${{ github.repository }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+
+      - name: Check package version set
+        shell: bash
+        run: npm version ${{ env.GS_VERSION }} --no-git-tag-version
+
+      - name: Test pack package tarball
+        shell: bash
+        run: npm pack --dry-run
+
+      - name: Setup NodeJS with npm registry
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Get package version from npm registry version
+        id: npm-regsitry-version
+        shell: bash
+        run: |
+          version=$(npm view @${{ github.repository }} version)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Check no package version exist in npm registry
+        if: ${{ steps.npm-regsitry-version.outputs.version == env.GS_VERSION }}
+        shell: bash
+        run: exit 1
+
+      - name: Test package publish to npm registry
+        shell: bash
+        run: npm publish --dry-run
+
+      - name: Setup NodeJS with GitHub package registry
+        uses: actions/setup-node@v6
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Get package version from npm registry version
+        id: github-regsitry-version
+        shell: bash
+        run: |
+          version=$(npm view @${{ github.repository }} version)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Check no package version exist in GitHub registry
+        if: ${{ steps.github-regsitry-version.outputs.version == env.GS_VERSION }}
+        shell: bash
+        run: exit 1
+
+      - name: Test package publish to GitHub registry
+        shell: bash
+        run: npm publish --dry-run
+
+      - name: Prepare GitHub bot app credentials
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Check GitHub bot app slug exist
+        if: ${{ steps.app-token.outputs.app-slug == null }}
+        shell: bash
+        run: exit 1
+
+      - name: Check GitHub bot app token exist
+        if: ${{ steps.app-token.outputs.token == null }}
+        shell: bash
+        run: exit 1
+
+      - name: Get GitHub App User ID
+        id: get-app-user-id
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          app_user_id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
+          echo "app_user_id=$app_user_id" >> $GITHUB_OUTPUT
+
+      - name: Check GitHub bot app user ID exist
+        if: ${{ steps.get-app-user-id.outputs.app_user_id == null }}
+        shell: bash
+        run: exit 1
+
+    outputs:
+      app_slug: ${{ steps.app-token.outputs.app-slug }}
+      app_token: ${{ steps.app-token.outputs.token }}
+      app_user_id: ${{ steps.get-app-user-id.outputs.app_user_id }}
+
   build:
     name: Build gifsicle artifacts
+
+    needs: prepare
 
     runs-on: ubuntu-latest
 
     env:
-      GS_VERSION: ${{ github.event.inputs.gifsicle-version }}
       EM_VERSION: ${{ github.event.inputs.emscripten-version }}
       EM_CACHE_FOLDER: 'emsdk-cache'
       EMCC_CORES: 2 # Default for ubuntu-latest runner
@@ -107,7 +242,9 @@ jobs:
   publish:
     name: Publish gifsicle artifacts
 
-    needs: build
+    needs:
+      - build
+      - prepare
 
     runs-on: ubuntu-latest
 
@@ -119,7 +256,7 @@ jobs:
           name: gifsicle-js
           path: ./dist
 
-      - name: Check JS artifact downloaded
+      - name: Check JS artifact downloaded exist
         shell: bash
         run: test -f ./dist/gifsicle.js || exit 1
 
@@ -130,6 +267,65 @@ jobs:
           name: gifsicle-wasm
           path: ./dist
 
-      - name: Check WASM artifact downloaded
+      - name: Check WASM artifact downloaded exist
         shell: bash
         run: test -f ./dist/gifsicle.wasm || exit 1
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ needs.prepare.outputs.app_token }}
+
+      - name: Setup git credentials
+        run: |
+          git config --global user.name '${{ needs.prepare.outputs.app_slug }}[bot]'
+          git config --global user.email '${{ needs.prepare.outputs.app_user_id }}+${{ needs.prepare.outputs.app_slug }}[bot]@users.noreply.github.com'
+
+      - name: Create version branch
+        shell: bash
+        run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_VERSION }}
+
+      - name: Push version branch
+        shell: bash
+        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_VERSION }}
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+
+      - name: Set package version
+        shell: bash
+        run: npm version ${{ env.GS_VERSION }} --no-git-tag-version
+
+      - name: Commit changes
+        uses: iarekylew00t/verified-bot-commit@v2
+        with:
+          token: ${{ needs.prepare.outputs.app_token }}
+          auto-stage: true
+          ref: 'refs/heads/${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_VERSION }}'
+          message: 'Version bump to v${{ env.GS_VERSION }}'
+          files: |
+            **
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ needs.prepare.outputs.app_token }}
+        run: |
+          gh pr create \
+            --base ${{ env.MAIN_BRANCH }} \
+            --label ${{ env.VERSION_FILES_LABEL }} \
+            --head ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_VERSION }} \
+            --title "Version bump to v${{ env.GS_VERSION }}" \
+            --body "Bump version in files to v${{ env.GS_VERSION }}"
+
+      # TODO: Publish npm
+
+      # TODO: Publish Github registry
+
+      # TODO: Commit package.json
+
+      # TODO: Push commit
+
+      # TODO: Push new tag
+
+      # TODO: Push GitHub Release
