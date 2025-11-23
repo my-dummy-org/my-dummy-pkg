@@ -10,7 +10,7 @@ on:
         default: '1.96'
       emscripten-version:
         description: 'Emscripten version to use'
-        required: true
+        required: false
         type: string
         default: '4.0.20'
       patch-version:
@@ -28,7 +28,7 @@ on:
         default: '1.96'
       emscripten-version:
         description: 'Emscripten version to use'
-        required: true
+        required: false
         type: string
         default: '4.0.20'
       patch-version:

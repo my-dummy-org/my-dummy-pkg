@@ -30,21 +30,21 @@ jobs:
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
 
-      - name: Print result
-        if: ${{ steps.gifsicle-latest-tag.outputs.tag == steps.gifsicle-own-tag.outputs.tag }}
-        run: echo "No new version found"
-
-      - name: Print latest tag
+      - name: Tag to version
+        id: gifsicle-latest-version
         if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
+        shell: bash
         run: |
-          echo "gifsicle latest: ${{ steps.gifsicle-latest-tag.outputs.tag }}"
-          echo "own tag: ${{ steps.gifsicle-own-tag.outputs.tag}}"
-          echo "Found new version"
+          tag="${{ steps.gifsicle-latest-tag.outputs.tag }}"
+          version="${tag#v}"
+          echo "version=$version" >> $GITHUB_OUTPUT
 
-    # uses: ./.github/workflows/manual-release.yml
-    # with:
-    #   gifsicle-version: '1.96'
-    #   emscripten-version: '4.0.20'
-    #   patch-version: '0'
+      - name: Checkout gifsicle repository
+        if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
+        uses: actions/checkout@v6
 
-    # git ls-remote --tags https://github.com/kohler/gifsicle.git refs/tags/v* | head -n1 | grep -o 'refs/tags/.*' | cut -d/ -f3
+      - name: Run bump
+        if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
+        uses: ./.github/workflows/manual-release.yml
+        with:
+          gifsicle-version: '${{ steps.gifsicle-latest-version.outputs.version }}'
