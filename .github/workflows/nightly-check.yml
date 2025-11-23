@@ -1,4 +1,4 @@
-name: Scheduled nightly new version check
+name: Nightly new version check
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
         shell: bash
         run: |
           echo "tag=$(git ls-remote --tags https://github.com/kohler/gifsicle.git \
-            | head -n1 \
+            | tail -n1 \
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
 
