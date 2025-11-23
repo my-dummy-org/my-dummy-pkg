@@ -196,9 +196,16 @@ jobs:
           version: ${{ env.EM_VERSION }}
           actions-cache-folder: ${{ env.EM_CACHE_FOLDER }}
 
+      - name: Check config type
+        id: run-bootstrap
+        run: |
+          run=$(test -f ./configure.ac && echo true || echo false)
+          echo "run=$run" >> $GITHUB_OUTPUT
+
       - name: Run bootstrap script
+        if: ${{ steps.run-bootstrap.outputs.run == 'true' }}
         shell: bash
-        run: test -f ./configure.ac && bash ./bootstrap.sh
+        run: bash ./bootstrap.sh
 
       - name: Emscripten configure
         shell: bash
