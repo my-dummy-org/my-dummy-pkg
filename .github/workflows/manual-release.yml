@@ -198,7 +198,7 @@ jobs:
 
       - name: Run bootstrap script
         shell: bash
-        run: ./bootstrap.sh
+        run: bash ./bootstrap.sh
 
       - name: Emscripten configure
         shell: bash
