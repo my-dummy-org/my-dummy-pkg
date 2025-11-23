@@ -1,0 +1,36 @@
+name: Scheduled nightly new version check
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 0 * * *' # runs every day at 00:00 UTC (midnight)
+
+jobs:
+  nightly-check:
+    name: Check gifsicle new version
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get latest gifsicle tag
+        id: latest-tag
+        shell: bash
+        run: |
+          echo "tag=$(git ls-remote --tags https://github.com/kohler/gifsicle.git \
+            | head -n1 \
+            | grep -o 'refs/tags/.*' \
+            | cut -d/ -f3)" >> $GITHUB_OUTPUT
+
+      - name: Print latest tag
+        if: |
+          steps.latest-tag.outputs.tag != null &&
+          steps.latest-tag.outputs.tag != ''
+        run: echo "latest tag ${{ steps.latest-tag.outputs.tag }}"
+
+    # uses: ./.github/workflows/manual-release.yml
+    # with:
+    #   gifsicle-version: '1.96'
+    #   emscripten-version: '4.0.20'
+    #   patch-version: '0'
+
+    # git ls-remote --tags https://github.com/kohler/gifsicle.git refs/tags/v* | head -n1 | grep -o 'refs/tags/.*' | cut -d/ -f3
