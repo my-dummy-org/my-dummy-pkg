@@ -1,5 +1,7 @@
 # my-dummy-pkg
 
+version 0.19.2
+
 ## Features:
 
 - Feature 1
