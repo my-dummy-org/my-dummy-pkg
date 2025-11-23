@@ -176,6 +176,10 @@ jobs:
         with:
           path: source
 
+      - name: Verify bootstrap script
+        shell: bash
+        run: test ! -f ./bootstrap.sh && cp ./source/bootstrap.js ./bootstrap.js
+
       - name: Copy closure externs
         shell: bash
         run: cp ./source/closure-externs.js ./closure-externs.js
