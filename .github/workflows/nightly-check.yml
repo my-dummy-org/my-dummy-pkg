@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Get latest gifsicle tag
-        id: latest-tag
+        id: gifsicle-latest-tag
         shell: bash
         run: |
           echo "tag=$(git ls-remote --tags https://github.com/kohler/gifsicle.git \
@@ -21,11 +21,25 @@ jobs:
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
 
+      - name: Get own gifsicle tag
+        id: gifsicle-own-tag
+        shell: bash
+        run: |
+          echo "tag=$(git ls-remote --tags https://github.com/${{ github.repository }}.git \
+            refs/tags/v${{ steps.gifsicle-latest-tag.outputs.tag }} \
+            | grep -o 'refs/tags/.*' \
+            | cut -d/ -f3)" >> $GITHUB_OUTPUT
+
+      - name: Print result
+        if: ${{ steps.gifsicle-latest-tag.outputs.tag == steps.gifsicle-own-tag.outputs.tag }}
+        run: echo "No new version found"
+
       - name: Print latest tag
-        if: |
-          steps.latest-tag.outputs.tag != null &&
-          steps.latest-tag.outputs.tag != ''
-        run: echo "latest tag ${{ steps.latest-tag.outputs.tag }}"
+        if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
+        run: |
+          echo "gifsicle latest: ${{ steps.gifsicle-latest-tag.outputs.tag }}"
+          echo "own tag: ${{ steps.gifsicle-own-tag.outputs.tag}}"
+          echo "Found new version"
 
     # uses: ./.github/workflows/manual-release.yml
     # with:
