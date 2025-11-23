@@ -30,7 +30,7 @@ env:
 
 jobs:
   prepare:
-    name: Prepare dependencies
+    name: Run prepare checks
 
     runs-on: ubuntu-latest
 
@@ -50,6 +50,8 @@ jobs:
               refs/tags/v${{ env.GS_VERSION }}
 
       - name: Check no own GitHub release exist
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: gh release view v${{ env.GS_VERSION }} --repo ${{ github.repository }}
 
