@@ -178,7 +178,7 @@ jobs:
 
       - name: Verify bootstrap script
         shell: bash
-        run: test ! -f ./bootstrap.sh && cp ./source/bootstrap.js ./bootstrap.js
+        run: test ! -f ./bootstrap.sh && cp ./source/bootstrap.sh ./bootstrap.sh
 
       - name: Copy closure externs
         shell: bash
