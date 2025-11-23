@@ -14,6 +14,11 @@ on:
         required: true
         type: string
         default: '4.0.20'
+      patch-version:
+        description: 'Patch version to use'
+        required: false
+        type: string
+        default: '0'
 
 permissions:
   contents: read # Required to clone repository
@@ -22,7 +27,7 @@ permissions:
 
 env:
   GS_VERSION: ${{ github.event.inputs.gifsicle-version }}
-  GS_SEMVER_VERSION: '${{ github.event.inputs.gifsicle-version }}.0'
+  GS_SEMVER_VERSION: '${{ github.event.inputs.gifsicle-version }}.${{ github.event.inputs.patch-version }}'
   GS_REPO: 'kohler/gifsicle'
   NODE_VERSION: '24.5.0'
   VERSION_FILES_LABEL: 'version-files'
@@ -176,9 +181,16 @@ jobs:
         with:
           path: source
 
+      - name: Check bootstrap exist
+        id: check-bootstrap
+        run: |
+          exist=$(test -f ./bootstrap.sh && echo true || echo false)
+          echo "exist=$exist" >> $GITHUB_OUTPUT
+
       - name: Verify bootstrap script
+        if: ${{ steps.check-bootstrap.outputs.exist == 'false' }}
         shell: bash
-        run: test ! -f ./bootstrap.sh && cp ./source/bootstrap.sh ./bootstrap.sh
+        run: cp ./source/bootstrap.sh ./bootstrap.sh
 
       - name: Copy closure externs
         shell: bash
