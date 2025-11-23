@@ -187,7 +187,7 @@ jobs:
           key: ${{env.EM_VERSION}}-${{ runner.os }}
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: agriyakhetarpal/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
         with:
           version: ${{ env.EM_VERSION }}
           actions-cache-folder: ${{ env.EM_CACHE_FOLDER }}
