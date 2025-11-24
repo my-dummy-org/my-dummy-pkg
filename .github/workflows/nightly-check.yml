@@ -21,6 +21,7 @@ jobs:
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
 
+      # TODO: Does not check for semver tag form (use both when publishing)
       - name: Get own gifsicle tag
         id: gifsicle-own-tag
         shell: bash
@@ -39,12 +40,11 @@ jobs:
           version="${tag#v}"
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Checkout gifsicle repository
-        if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
-        uses: actions/checkout@v6
+    outputs:
+      gifsicle-version: '${{ steps.gifsicle-latest-version.outputs.version }}'
 
-      - name: Run bump
-        if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
-        uses: ./.github/workflows/manual-release.yml
-        with:
-          gifsicle-version: '${{ steps.gifsicle-latest-version.outputs.version }}'
+  call-manual-release:
+    needs: nightly-check
+    uses: ./.github/workflows/manual-release.yml
+    with:
+      gifsicle-version: '${{ needs.nightly-check.outputs.gifsicle-version }}'
