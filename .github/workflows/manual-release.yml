@@ -65,7 +65,7 @@ jobs:
         run: |
           git ls-remote --exit-code \
             https://github.com/${{ env.EM_REPO }}.git \
-            refs/tags/v${{ env.EM_VERSION }}
+            refs/tags/${{ env.EM_VERSION }}
 
       - name: Check gifsicle version tag exist
         shell: bash
