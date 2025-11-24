@@ -55,5 +55,6 @@ jobs:
       contents: read
       id-token: write
       packages: write
+    secrets: inherit
     with:
       gifsicle-version: ${{ needs.nightly-check.outputs.gifsicle-version }}
