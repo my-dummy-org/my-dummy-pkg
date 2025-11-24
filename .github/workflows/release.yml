@@ -78,7 +78,7 @@ on:
         default: 'gifsicle-wasm'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
   packages: write
 

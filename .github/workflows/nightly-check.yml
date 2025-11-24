@@ -80,7 +80,7 @@ jobs:
       - env-to-outputs
     uses: ./.github/workflows/release.yml
     permissions:
-      contents: read
+      contents: write
       id-token: write
       packages: write
     secrets: inherit
