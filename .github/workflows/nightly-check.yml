@@ -46,5 +46,9 @@ jobs:
   call-manual-release:
     needs: nightly-check
     uses: ./.github/workflows/manual-release.yml
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
     with:
       gifsicle-version: '${{ needs.nightly-check.outputs.gifsicle-version }}'
