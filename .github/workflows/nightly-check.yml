@@ -40,8 +40,13 @@ jobs:
           version="${tag#v}"
           echo "version=$version" >> $GITHUB_OUTPUT
 
+      - name: Print resolved version
+        if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
+        shell: bash
+        run: echo "resolved version ${{ steps.gifsicle-latest-version.outputs.version }}"
+
     outputs:
-      gifsicle-version: '${{ steps.gifsicle-latest-version.outputs.version }}'
+      gifsicle-version: ${{ steps.gifsicle-latest-version.outputs.version }}
 
   call-manual-release:
     needs: nightly-check
@@ -51,4 +56,4 @@ jobs:
       id-token: write
       packages: write
     with:
-      gifsicle-version: '${{ needs.nightly-check.outputs.gifsicle-version }}'
+      gifsicle-version: ${{ needs.nightly-check.outputs.gifsicle-version }}
