@@ -184,6 +184,10 @@ jobs:
         shell: bash
         run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }}
 
+      - name: Push version branch
+        shell: bash
+        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }}
+
       # download artifacts to dist folder
 
       - name: Download JS artifact
@@ -262,9 +266,9 @@ jobs:
 
       # Push branch (commits + tags)
 
-      - name: Push version branch
+      - name: Push commits and tags to version branch
         shell: bash
-        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }} --follow-tags
+        run: git push origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }} --follow-tags
 
       # make GitHub release
 
