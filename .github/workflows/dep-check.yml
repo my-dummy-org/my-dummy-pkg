@@ -1,0 +1,321 @@
+name: Check dependencies
+
+on:
+  workflow_call:
+    inputs:
+      gifsicle-version:
+        description: 'Gifsicle version to use'
+        required: true
+        type: string
+        default: '1.96'
+      emscripten-version:
+        description: 'Emscripten version to use'
+        required: true
+        type: string
+        default: '4.0.20'
+      patch-version:
+        description: 'Patch version to use'
+        required: true
+        type: string
+        default: '0'
+
+  workflow_dispatch:
+    inputs:
+      gifsicle-version:
+        description: 'Gifsicle version to use'
+        required: true
+        type: string
+        default: '1.96'
+      emscripten-version:
+        description: 'Emscripten version to use'
+        required: true
+        type: string
+        default: '4.0.20'
+      patch-version:
+        description: 'Patch version to use'
+        required: true
+        type: string
+        default: '0'
+
+permissions:
+  contents: read # Required to clone repository
+  id-token: write # Required for OIDC trusted publishing authentication
+  packages: write # Required to publish to GitHub registry
+
+env:
+  GS_REPO: 'kohler/gifsicle'
+  GS_VERSION: ${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}
+  GS_SEMVER_VERSION: '${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}.${{ inputs.patch-version || github.event.inputs.patch-version }}'
+  EM_REPO: 'emscripten-core/emsdk'
+  EM_VERSION: ${{ inputs.emscripten-version || github.event.inputs.emscripten-version }}
+  NODE_VERSION: '24.5.0'
+
+jobs:
+  has-inputs:
+    name: Check inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check gifsicle version
+        if: |
+          env.GS_VERSION == null &&
+          env.GS_VERSION == ''
+        shell: bash
+        run: exit 1
+
+      - name: Check gifsicle semver
+        if: |
+          env.GS_SEMVER_VERSION == null &&
+          env.GS_SEMVER_VERSION == '.'
+        shell: bash
+        run: exit 1
+
+      - name: Check Emscripten version
+        if: |
+          env.EM_VERSION == null &&
+          env.EM_VERSION == ''
+        shell: bash
+        run: exit 1
+
+  has-gifsicle-version-tag:
+    name: Check gifsicle version tag exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: List gifsicle version tag
+        shell: bash
+        run: |
+          git ls-remote --exit-code \
+            https://github.com/${{ env.GS_REPO }}.git \
+            refs/tags/v${{ env.GS_VERSION }}
+
+  has-emscripten-version-tag:
+    name: Check Emscripten version tag exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: List Emscripten version tag
+        shell: bash
+        run: |
+          git ls-remote --exit-code \
+            https://github.com/${{ env.EM_REPO }}.git \
+            refs/tags/${{ env.EM_VERSION }}
+
+  has-no-own-version-tag:
+    name: Check no own version tag exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: List own version tag
+        shell: bash
+        run: |
+          ! git ls-remote --exit-code \
+              https://github.com/${{ github.repository }}.git \
+              refs/tags/v${{ env.GS_VERSION }}
+
+  has-no-own-semver-tag:
+    name: Check no own semver tag exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: List own semver tag
+        shell: bash
+        run: |
+          ! git ls-remote --exit-code \
+              https://github.com/${{ github.repository }}.git \
+              refs/tags/v${{ env.GS_SEMVER_VERSION }}
+
+  has-no-own-version-release:
+    name: Check no own GitHub version release exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: List own GitHub version release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          ! gh release view v${{ env.GS_VERSION }} --repo ${{ github.repository }}
+
+  has-no-own-semver-release:
+    name: Check no own GitHub semver release exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: List own GitHub semver release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          ! gh release view v${{ env.GS_SEMVER_VERSION }} --repo ${{ github.repository }}
+
+  can-set-package-version:
+    name: Check can set package version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set package semver version
+        shell: bash
+        run: npm version ${{ env.GS_SEMVER_VERSION }} --no-git-tag-version
+
+  can-pack-tarball:
+    name: Check can pack tarball package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set package semver version
+        shell: bash
+        run: npm version ${{ env.GS_SEMVER_VERSION }} --no-git-tag-version
+
+      - name: Test pack package tarball
+        shell: bash
+        run: npm pack --dry-run
+
+  has-no-npm-registry-version:
+    name: Check semver not published to npm registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup NodeJS with npm registry
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Get package version from npm registry
+        id: npm-regsitry-version
+        shell: bash
+        run: |
+          version=$(npm view @${{ github.repository }} version)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Check no package version exist in npm registry
+        if: ${{ steps.npm-regsitry-version.outputs.version == env.GS_SEMVER_VERSION }}
+        shell: bash
+        run: exit 1
+
+  can-npm-registry-publish:
+    name: Check can publish to npm registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup NodeJS with npm registry
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Set package semver version
+        shell: bash
+        run: npm version ${{ env.GS_SEMVER_VERSION }} --no-git-tag-version
+
+      - name: Test package publish to npm registry
+        shell: bash
+        run: npm publish --dry-run
+
+  has-no-github-registry-version:
+    name: Check semver not published to GitHub registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup NodeJS with GitHub package registry
+        uses: actions/setup-node@v6
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Get package version from GitHub registry
+        id: github-regsitry-version
+        shell: bash
+        run: |
+          version=$(npm view @${{ github.repository }} version)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Check no package version exist in GitHub registry
+        if: ${{ steps.github-regsitry-version.outputs.version == env.GS_SEMVER_VERSION }}
+        shell: bash
+        run: exit 1
+
+  can-github-registry-publish:
+    name: Check can publish to GitHub registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup NodeJS with GitHub package registry
+        uses: actions/setup-node@v6
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Set package semver version
+        shell: bash
+        run: npm version ${{ env.GS_SEMVER_VERSION }} --no-git-tag-version
+
+      - name: Test package publish to GitHub registry
+        shell: bash
+        run: npm publish --dry-run
+
+  has-github-bot-app-vars:
+    name: Check has all GitHub bot app varaibles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare GitHub bot app credentials
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          skip-token-revoke: true
+
+      - name: Check GitHub bot app slug exist
+        if: |
+          steps.app-token.outputs.app-slug == null &&
+          steps.app-token.outputs.app-slug == ''
+        shell: bash
+        run: exit 1
+
+      - name: Check GitHub bot app token exist
+        if: |
+          steps.app-token.outputs.token == null &&
+          steps.app-token.outputs.token == ''
+        shell: bash
+        run: exit 1
+
+      - name: Get GitHub bot app user id
+        id: get-app-user-id
+        if: |
+          steps.app-token.outputs.token != null &&
+          steps.app-token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          app_user_id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
+          echo "app_user_id=$app_user_id" >> $GITHUB_OUTPUT
+
+      - name: Check GitHub bot app user id exist
+        if: ${{ steps.get-app-user-id.outputs.app_user_id == null }}
+        shell: bash
+        run: exit 1

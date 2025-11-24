@@ -1,4 +1,4 @@
-name: Nightly new version check
+name: Nightly check for new version
 
 on:
   workflow_dispatch:
@@ -6,11 +6,9 @@ on:
   #   - cron: '0 0 * * *' # runs every day at 00:00 UTC (midnight)
 
 jobs:
-  nightly-check:
+  new-version-check:
     name: Check gifsicle new version
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Get latest gifsicle tag
         id: gifsicle-latest-tag
@@ -48,13 +46,28 @@ jobs:
     outputs:
       gifsicle-version: ${{ steps.gifsicle-latest-version.outputs.version }}
 
-  call-manual-release:
-    needs: nightly-check
-    uses: ./.github/workflows/manual-release.yml
+  call-dep-check:
+    name: Run dependency checks
+    needs: new-version-check
+    if: |
+      needs.new-version-check.outputs.gifsicle-version != null &&
+      needs.new-version-check.outputs.gifsicle-version != ''
+    uses: ./.github/workflows/dep-check.yml
     permissions:
       contents: read
       id-token: write
       packages: write
     secrets: inherit
     with:
-      gifsicle-version: ${{ needs.nightly-check.outputs.gifsicle-version }}
+      gifsicle-version: ${{ needs.new-version-check.outputs.gifsicle-version }}
+      emscripten-version: '4.0.20'
+      patch-version: '0'
+
+  bump-version:
+    name: Bump version
+    needs: call-dep-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print dependency check success message
+        shell: bash
+        run: echo "Dependency check success"
