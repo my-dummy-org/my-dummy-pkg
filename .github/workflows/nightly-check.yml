@@ -18,6 +18,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  packages: write
 
 env:
   GS_REPO: 'kohler/gifsicle'
@@ -79,6 +81,8 @@ jobs:
     uses: ./.github/workflows/release.yml
     permissions:
       contents: read
+      id-token: write
+      packages: write
     secrets: inherit
     with:
       gifsicle-version: ${{ needs.new-version-check.outputs.gifsicle-version }}
