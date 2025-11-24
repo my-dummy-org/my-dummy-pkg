@@ -24,12 +24,12 @@ on:
         type: string
         default: 'gifsicle.wasm'
       gifsicle-js-artifact-name:
-        description: 'Name for the uploaded gifsicle JS artifact'
+        description: 'Name for the uploaded gifsicle JS artifact to upload'
         required: false
         type: string
         default: 'gifsicle-js'
       gifsicle-wasm-artifact-name:
-        description: 'Name for the uploaded gifsicle WASM artifact'
+        description: 'Name for the uploaded gifsicle WASM artifact to upload'
         required: false
         type: string
         default: 'gifsicle-wasm'

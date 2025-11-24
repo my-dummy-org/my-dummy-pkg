@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      gifsicle-version:
+        description: 'Gifsicle version to use'
+        required: true
+        type: string
+        default: '1.96'
+      emscripten-version:
+        description: 'Emscripten version to use'
+        required: true
+        type: string
+        default: '4.0.20'
+      patch-version:
+        description: 'Patch version to use'
+        required: true
+        type: string
+        default: '0'
+
+  workflow_dispatch:
+    inputs:
+      gifsicle-version:
+        description: 'Gifsicle version to use'
+        required: true
+        type: string
+        default: '1.96'
+      emscripten-version:
+        description: 'Emscripten version to use'
+        required: true
+        type: string
+        default: '4.0.20'
+      patch-version:
+        description: 'Patch version to use'
+        required: true
+        type: string
+        default: '0'
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+env:
+  GS_VERSION: ${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}
+  EM_VERSION: ${{ inputs.emscripten-version || github.event.inputs.emscripten-version }}
+  PATCH_VERSION: ${{ inputs.patch-version || github.event.inputs.patch-versionn }}
+
+jobs:
+  env-to-outputs:
+    runs-on: ubuntu-latest
+    outputs:
+      gifsicle-version: ${{ env.GS_VERSION }}
+      emscripten-version: ${{ env.EM_VERSION }}
+      patch-version: ${{ env.PATCH_VERSION }}
+
+  call-dep-check:
+    name: Run dependency checks
+    needs: env-to-outputs
+    uses: ./.github/workflows/dep-check.yml
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    secrets: inherit
+    with:
+      gifsicle-version: ${{ needs.env-to-outputs.outputs.gifsicle-version }}
+      emscripten-version: ${{ needs.env-to-outputs.outputs.emscripten-version }}
+      patch-version: ${{ needs.env-to-outputs.outputs.patch-version }}
+
+  call-build:
+    name: Build artifacts
+    needs:
+      - env-to-outputs
+      - call-dep-check
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      gifsicle-version: ${{ needs.env-to-outputs.outputs.gifsicle-version }}
+      emscripten-version: ${{ needs.env-to-outputs.outputs.emscripten-version }}
