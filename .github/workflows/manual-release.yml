@@ -1,7 +1,7 @@
 name: Manual release
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       gifsicle-version:
         description: 'Gifsicle version to use'
@@ -19,7 +19,7 @@ on:
         type: string
         default: '0'
 
-  workflow_call:
+  workflow_dispatch:
     inputs:
       gifsicle-version:
         description: 'Gifsicle version to use'
@@ -43,8 +43,10 @@ permissions:
   packages: write # Required to publish to GitHub registry
 
 env:
-  GS_VERSION: ${{ github.event.inputs.gifsicle-version }}
-  GS_SEMVER_VERSION: '${{ github.event.inputs.gifsicle-version }}.${{ github.event.inputs.patch-version }}'
+  EM_VERSION: ${{ inputs.emscripten-version || github.event.inputs.emscripten-version }}
+  GS_VERSION: ${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}
+  GS_SEMVER_VERSION: '${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}.${{ inputs.patch-version || github.event.inputs.patch-version }}'
+  EM_REPO: 'emscripten-core/emsdk'
   GS_REPO: 'kohler/gifsicle'
   NODE_VERSION: '24.5.0'
   VERSION_FILES_LABEL: 'version-files'
@@ -58,6 +60,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check Emscripten version tag exist
+        shell: bash
+        run: |
+          git ls-remote --exit-code \
+            https://github.com/${{ env.EM_REPO }}.git \
+            refs/tags/v${{ env.EM_VERSION }}
+
       - name: Check gifsicle version tag exist
         shell: bash
         run: |
@@ -182,7 +191,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      EM_VERSION: ${{ github.event.inputs.emscripten-version }}
       EM_CACHE_FOLDER: 'emsdk-cache'
       EMCC_CORES: 2 # Default for ubuntu-latest runner
 
