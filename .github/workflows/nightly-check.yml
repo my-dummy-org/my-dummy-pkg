@@ -5,6 +5,12 @@ on:
   # schedule:
   #   - cron: '0 0 * * *' # runs every day at 00:00 UTC (midnight)
 
+permissions:
+  contents: read
+
+env:
+  GS_REPO: 'kohler/gifsicle'
+
 jobs:
   new-version-check:
     name: Check gifsicle new version
@@ -14,7 +20,7 @@ jobs:
         id: gifsicle-latest-tag
         shell: bash
         run: |
-          echo "tag=$(git ls-remote --tags https://github.com/kohler/gifsicle.git \
+          echo "tag=$(git ls-remote --tags https://github.com/${{ env.GS_REPO }}.git \
             | tail -n1 \
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
@@ -63,11 +69,17 @@ jobs:
       emscripten-version: '4.0.20'
       patch-version: '0'
 
-  bump-version:
-    name: Bump version
-    needs: call-dep-check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print dependency check success message
-        shell: bash
-        run: echo "Dependency check success"
+  call-build:
+    name: Build artifacts
+    needs:
+      - new-version-check
+      - call-dep-check
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    secrets: inherit
+    with:
+      gifsicle-version: ${{ needs.new-version-check.outputs.gifsicle-version }}
+      emscripten-version: '4.0.20'

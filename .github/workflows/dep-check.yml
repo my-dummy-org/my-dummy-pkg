@@ -311,6 +311,7 @@ jobs:
           steps.app-token.outputs.token != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
         run: |
           app_user_id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
           echo "app_user_id=$app_user_id" >> $GITHUB_OUTPUT

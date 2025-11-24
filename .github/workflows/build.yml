@@ -1,0 +1,177 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      gifsicle-version:
+        description: 'Gifsicle version to use'
+        required: true
+        type: string
+        default: '1.96'
+      emscripten-version:
+        description: 'Emscripten version to use'
+        required: true
+        type: string
+        default: '4.0.20'
+      gifsicle-js-filename:
+        description: 'Filename for JS build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.js'
+      gifsicle-wasm-filename:
+        description: 'Filename for WASM build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.wasm'
+      gifsicle-js-artifact-name:
+        description: 'Name for the uploaded gifsicle JS artifact'
+        required: false
+        type: string
+        default: 'gifsicle-js'
+      gifsicle-wasm-artifact-name:
+        description: 'Name for the uploaded gifsicle WASM artifact'
+        required: false
+        type: string
+        default: 'gifsicle-wasm'
+
+  workflow_dispatch:
+    inputs:
+      gifsicle-version:
+        description: 'Gifsicle version to use'
+        required: true
+        type: string
+        default: '1.96'
+      emscripten-version:
+        description: 'Emscripten version to use'
+        required: true
+        type: string
+        default: '4.0.20'
+      gifsicle-js-filename:
+        description: 'Filename for JS build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.js'
+      gifsicle-wasm-filename:
+        description: 'Filename for WASM build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.wasm'
+      gifsicle-js-artifact-name:
+        description: 'Name for the uploaded gifsicle JS artifact'
+        required: false
+        type: string
+        default: 'gifsicle-js'
+      gifsicle-wasm-artifact-name:
+        description: 'Name for the uploaded gifsicle WASM artifact'
+        required: false
+        type: string
+        default: 'gifsicle-wasm'
+
+permissions:
+  contents: read # Required to clone repository
+
+env:
+  GS_REPO: 'kohler/gifsicle'
+  GS_VERSION: ${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}
+  EM_VERSION: ${{ inputs.emscripten-version || github.event.inputs.emscripten-version }}
+  EM_CACHE_FOLDER: 'emsdk-cache'
+  EMCC_CORES: 2 # Default for ubuntu-latest runner
+  BOOTSTRAP_FILENAME: 'bootstrap.sh'
+  CLOSURE_EXTERNS_FILENAME: 'closure-externs.js'
+  GS_JS_FILENAME: ${{ inputs.gifsicle-js-filename || github.event.inputs.gifsicle-js-filename }}
+  GS_WASM_FILENAME: ${{ inputs.gifsicle-wasm-filename || github.event.inputs.gifsicle-wasm-filename }}
+  GS_JS_ARTIFACT_NAME: ${{ inputs.gifsicle-js-artifact-name || github.event.inputs.gifsicle-js-artifact-name }}
+  GS_WASM_ARTIFACT_NAME: ${{ inputs.gifsicle-wasm-artifact-name || github.event.inputs.gifsicle-wasm-artifact-name}}
+
+jobs:
+  build:
+    name: Build gifsicle artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gifsicle repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.GS_REPO }}
+          ref: 'v${{ env.GS_VERSION }}'
+
+      - name: Checkout own repository
+        uses: actions/checkout@v6
+        with:
+          path: source
+
+      - name: Check bootstrap script exist
+        id: check-bootstrap
+        shell: bash
+        run: |
+          exist=$(test -f ./${{ env.BOOTSTRAP_FILENAME }} && echo true || echo false)
+          echo "exist=$exist" >> $GITHUB_OUTPUT
+
+      - name: Safe copy bootstrap script
+        if: ${{ steps.check-bootstrap.outputs.exist == 'false' }}
+        shell: bash
+        run: cp ./source/${{ env.BOOTSTRAP_FILENAME }} ./${{ env.BOOTSTRAP_FILENAME }}
+
+      - name: Run bootstrap script
+        shell: bash
+        run: bash ./${{ env.BOOTSTRAP_FILENAME }}
+
+      - name: Copy closure externs
+        shell: bash
+        run: cp ./source/${{ env.CLOSURE_EXTERNS_FILENAME }} ./${{ env.CLOSURE_EXTERNS_FILENAME }}
+
+      - name: Setup Emscripten cache
+        uses: actions/cache@v4
+        with:
+          path: ${{env.EM_CACHE_FOLDER}}
+          key: ${{env.EM_VERSION}}-${{ runner.os }}
+
+      - name: Setup Emscripten
+        uses: agriyakhetarpal/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
+        with:
+          version: ${{ env.EM_VERSION }}
+          actions-cache-folder: ${{ env.EM_CACHE_FOLDER }}
+
+      - name: Emscripten configure
+        shell: bash
+        run: emconfigure ./configure --disable-gifview --disable-gifdiff
+
+      - name: Emscripten make
+        shell: bash
+        run: emmake make
+
+      - name: Emscripten compile
+        shell: bash
+        run: |
+          emcc ./src/*.o -o ./src/gifsicle.js \
+            -g0 \
+            -flto \
+            -O3 \
+            --closure 1 \
+            --closure-args="--externs ./closure-externs.js" \
+            -s ENVIRONMENT=worker \
+            -s ALLOW_MEMORY_GROWTH=1 \
+            -s IGNORE_MISSING_MAIN=0 \
+            -s INVOKE_RUN=0 \
+            -s MODULARIZE=1 \
+            -s EXPORTED_RUNTIME_METHODS=FS,callMain \
+            -s INCOMING_MODULE_JS_API=locateFile,print,printErr \
+            -s EXPORT_NAME=createModule \
+            -s EXPORT_ES6=1
+
+      - name: Upload JS artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: gifsicle-js
+          path: ./src/${{ env.GS_JS_FILENAME }}
+          compression-level: 9
+          if-no-files-found: error
+          overwrite: false # Fail with error if exist
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: gifsicle-wasm
+          path: ./src/${{ env.GS_WASM_FILENAME }}
+          compression-level: 9
+          if-no-files-found: error
+          overwrite: false # Fail with error if exist
