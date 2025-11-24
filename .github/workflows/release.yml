@@ -271,16 +271,32 @@ jobs:
         run: git push origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }} --follow-tags
 
       # make GitHub release
+      # TODO: requires a tag
+      # TODO: move to publish (triggered by tag so release will be created for each which is good)
 
       - name: Create tarball
         run: npm pack
 
-      - name: Publish GitHub release
+      - name: Publish version GitHub release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ steps.app-token.outputs.token }}
+          tag_name: 'v${{ env.GS_VERSION }}'
           files: ./*.tgz
           fail_on_unmatched_files: true
+          preserve_order: true
+          generate_release_notes: true
+          prerelease: false
+          draft: false
+
+      - name: Publish semver GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          tag_name: 'v${{ env.GS_SEMVER_VERSION }}'
+          files: ./*.tgz
+          fail_on_unmatched_files: true
+          preserve_order: true
           generate_release_notes: true
           prerelease: false
           draft: false
