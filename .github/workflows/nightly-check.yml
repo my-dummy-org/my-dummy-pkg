@@ -66,6 +66,10 @@ jobs:
     outputs:
       emscripten-version: ${{ env.EM_VERSION }}
       patch-version: ${{ env.PATCH_VERSION }}
+    steps:
+      # Jobs require at least one step
+      - name: Print
+        run: echo "Converting env to outputs"
 
   call-release:
     name: Release
