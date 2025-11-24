@@ -178,11 +178,26 @@ jobs:
           git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
           git config --global user.email '${{ steps.get-app-user-id.outputs.app_user_id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
 
+      # import GPG
+
+      - name: Import GPG signing key
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          git_user_signingkey: true
+          git_tag_gpgsign: true
+
       # Create version branch
 
       - name: Create version branch
         shell: bash
         run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }}
+
+      - name: Push version branch
+        shell: bash
+        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }}
 
       # download artifacts to dist folder
 
@@ -219,17 +234,6 @@ jobs:
         shell: bash
         run: npm version ${{ env.GS_SEMVER_VERSION }} --no-git-tag-version
 
-      # import GPG
-
-      - name: Import GPG signing key
-        id: import-gpg
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          git_user_signingkey: true
-          git_tag_gpgsign: true
-
       # create commit
 
       - name: Commit changes
@@ -262,9 +266,9 @@ jobs:
 
       # Push branch (commits + tags)
 
-      - name: Push version branch
+      - name: Push commits and tags to version branch
         shell: bash
-        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }} --follow-tags
+        run: git push origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }} --follow-tags
 
       # make GitHub release
 
