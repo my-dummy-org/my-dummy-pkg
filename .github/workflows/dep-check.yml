@@ -278,6 +278,29 @@ jobs:
         shell: bash
         run: npm publish --dry-run
 
+  has-gpg:
+    name: Check has GPG signing key
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Import GPG signing key
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          git_user_signingkey: true
+          git_tag_gpgsign: true
+
+      - name: Check GPG signing key exist
+        if: |
+          steps.import-gpg.outputs.keyid == null ||
+          steps.import-gpg.outputs.keyid == ''
+        shell: bash
+        run: exit 1
+
   has-github-bot-app-vars:
     name: Check has all GitHub bot app varaibles
     runs-on: ubuntu-latest
@@ -288,27 +311,23 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          skip-token-revoke: true
 
       - name: Check GitHub bot app slug exist
         if: |
-          steps.app-token.outputs.app-slug == null &&
+          steps.app-token.outputs.app-slug == null ||
           steps.app-token.outputs.app-slug == ''
         shell: bash
         run: exit 1
 
       - name: Check GitHub bot app token exist
         if: |
-          steps.app-token.outputs.token == null &&
+          steps.app-token.outputs.token == null ||
           steps.app-token.outputs.token == ''
         shell: bash
         run: exit 1
 
       - name: Get GitHub bot app user id
         id: get-app-user-id
-        if: |
-          steps.app-token.outputs.token != null &&
-          steps.app-token.outputs.token != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
@@ -317,6 +336,8 @@ jobs:
           echo "app_user_id=$app_user_id" >> $GITHUB_OUTPUT
 
       - name: Check GitHub bot app user id exist
-        if: ${{ steps.get-app-user-id.outputs.app_user_id == null }}
+        if: |
+          steps.get-app-user-id.outputs.app_user_id == null ||
+          steps.get-app-user-id.outputs.app_user_id == ''
         shell: bash
         run: exit 1

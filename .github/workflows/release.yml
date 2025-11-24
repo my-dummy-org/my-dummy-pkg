@@ -18,6 +18,26 @@ on:
         required: true
         type: string
         default: '0'
+      gifsicle-js-filename:
+        description: 'Filename for JS build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.js'
+      gifsicle-wasm-filename:
+        description: 'Filename for WASM build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.wasm'
+      gifsicle-js-artifact-name:
+        description: 'Name for the uploaded gifsicle JS artifact to upload'
+        required: false
+        type: string
+        default: 'gifsicle-js'
+      gifsicle-wasm-artifact-name:
+        description: 'Name for the uploaded gifsicle WASM artifact to upload'
+        required: false
+        type: string
+        default: 'gifsicle-wasm'
 
   workflow_dispatch:
     inputs:
@@ -36,6 +56,26 @@ on:
         required: true
         type: string
         default: '0'
+      gifsicle-js-filename:
+        description: 'Filename for JS build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.js'
+      gifsicle-wasm-filename:
+        description: 'Filename for WASM build artifact result'
+        required: false
+        type: string
+        default: 'gifsicle.wasm'
+      gifsicle-js-artifact-name:
+        description: 'Name for the uploaded gifsicle JS artifact'
+        required: false
+        type: string
+        default: 'gifsicle-js'
+      gifsicle-wasm-artifact-name:
+        description: 'Name for the uploaded gifsicle WASM artifact'
+        required: false
+        type: string
+        default: 'gifsicle-wasm'
 
 permissions:
   contents: read
@@ -43,9 +83,16 @@ permissions:
   packages: write
 
 env:
-  GS_VERSION: ${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}
   EM_VERSION: ${{ inputs.emscripten-version || github.event.inputs.emscripten-version }}
+  GS_VERSION: ${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}
+  GS_SEMVER_VERSION: '${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}.${{ inputs.patch-version || github.event.inputs.patch-version }}'
   PATCH_VERSION: ${{ inputs.patch-version || github.event.inputs.patch-versionn }}
+  GS_JS_FILENAME: ${{ inputs.gifsicle-js-filename || github.event.inputs.gifsicle-js-filename }}
+  GS_WASM_FILENAME: ${{ inputs.gifsicle-wasm-filename || github.event.inputs.gifsicle-wasm-filename }}
+  GS_JS_ARTIFACT_NAME: ${{ inputs.gifsicle-js-artifact-name || github.event.inputs.gifsicle-js-artifact-name }}
+  GS_WASM_ARTIFACT_NAME: ${{ inputs.gifsicle-wasm-artifact-name || github.event.inputs.gifsicle-wasm-artifact-name}}
+  VERSION_BRANCH_PREFIX: 'version/v'
+  NODE_VERSION: '24.5.0'
 
 jobs:
   env-to-outputs:
@@ -54,9 +101,14 @@ jobs:
       gifsicle-version: ${{ env.GS_VERSION }}
       emscripten-version: ${{ env.EM_VERSION }}
       patch-version: ${{ env.PATCH_VERSION }}
+      gifsicle-js-filename: ${{ env.GS_JS_FILENAME }}
+      gifsicle-wasm-filename: ${{ env.GS_WASM_FILENAME }}
+      gifsicle-js-artifact-name: ${{ env.GS_JS_ARTIFACT_NAME }}
+      gifsicle-wasm-artifact-name: ${{ env.GS_WASM_ARTIFACT_NAME }}
     steps:
       # Jobs require at least one step
       - name: Print
+        shell: bash
         run: echo "Converting env to outputs"
 
   call-dep-check:
@@ -85,3 +137,152 @@ jobs:
     with:
       gifsicle-version: ${{ needs.env-to-outputs.outputs.gifsicle-version }}
       emscripten-version: ${{ needs.env-to-outputs.outputs.emscripten-version }}
+      gifsicle-js-filename: ${{ needs.env-to-outputs.outputs.gifsicle-js-filename }}
+      gifsicle-wasm-filename: ${{ needs.env-to-outputs.outputs.gifsicle-wasm-filename }}
+      gifsicle-js-artifact-name: ${{ needs.env-to-outputs.outputs.gifsicle-js-artifact-name }}
+      gifsicle-wasm-artifact-name: ${{ needs.env-to-outputs.outputs.gifsicle-wasm-artifact-name }}
+
+  bump-version:
+    name: Bump version
+    needs:
+      - env-to-outputs
+      - call-dep-check
+      - call-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare GitHub bot app credentials
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Get GitHub App User ID
+        id: get-app-user-id
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          app_user_id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
+          echo "app_user_id=$app_user_id" >> $GITHUB_OUTPUT
+
+      - name: Setup git credentials
+        shell: bash
+        run: |
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-app-user-id.outputs.app_user_id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+
+      # Create version branch
+
+      - name: Create version branch
+        shell: bash
+        run: git checkout -b ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }}
+
+      # download artifacts to dist folder
+
+      - name: Download JS artifact
+        id: download-js
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.GS_JS_ARTIFACT_NAME }}
+          path: ./dist
+
+      - name: Check JS artifact downloaded exist
+        shell: bash
+        run: test -f ./dist/${{ env.GS_JS_FILENAME }} || exit 1
+
+      - name: Download WASM artifact
+        id: download-wasm
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.GS_WASM_ARTIFACT_NAME }}
+          path: ./dist
+
+      - name: Check WASM artifact downloaded exist
+        shell: bash
+        run: test -f ./dist/${{ env.GS_WASM_FILENAME }} || exit 1
+
+      # bump version in files
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set package semver version
+        shell: bash
+        run: npm version ${{ env.GS_SEMVER_VERSION }} --no-git-tag-version
+
+      # import GPG
+
+      - name: Import GPG signing key
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          git_user_signingkey: true
+          git_tag_gpgsign: true
+
+      # create commit
+
+      - name: Commit changes
+        uses: iarekylew00t/verified-bot-commit@v2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          auto-stage: true
+          ref: 'refs/heads/${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }}'
+          message: 'Release v${{ env.GS_SEMVER_VERSION }}'
+          files: |
+            **
+
+      # create version tag
+
+      - name: Create new git version tag
+        shell: bash
+        run: |
+          tag=v${{ env.GS_VERSION }}
+          keyid=${{ steps.import-gpg.outputs.keyid }}
+          git tag -u ${keyid} -a "${tag}" -m "Release ${tag}"
+
+      # create semver tag
+
+      - name: Create new git version tag
+        shell: bash
+        run: |
+          tag=v${{ env.GS_SEMVER_VERSION }}
+          keyid=${{ steps.import-gpg.outputs.keyid }}
+          git tag -u ${keyid} -a "${tag}" -m "Release ${tag}"
+
+      # Push branch (commits + tags)
+
+      - name: Push version branch
+        shell: bash
+        run: git push -u origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }} --follow-tags
+
+      # make GitHub release
+
+      - name: Create tarball
+        run: npm pack
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          files: ./*.tgz
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          prerelease: false
+          draft: false
+          # TODO: make_latest: true
+
+      # ? Delete branch (optional)
+      # TODO: Handle latest merge to main? (requires PR)
+      # TODO: Add tag push trigger to publish to registries (npm + GitHub)
+      # ! only trigger on semver tag
