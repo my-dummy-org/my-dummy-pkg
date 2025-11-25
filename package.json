@@ -8,9 +8,9 @@
     "url": "git+https://github.com/my-dummy-org/my-dummy-pkg.git"
   },
   "type": "module",
-  "main": "index.js",
+  "main": "./dist/gifsicle.js",
   "exports": {
-    ".": "./index.js",
+    ".": "./dist/gifsicle.js",
     "./gifsicle.js": "./dist/gifsicle.js",
     "./gifsicle.wasm": "./dist/gifsicle.wasm"
   }
