@@ -277,17 +277,6 @@ jobs:
         shell: bash
         run: npm pack
 
-      - name: Fetch changelog notes
-        shell: bash
-        run: |
-          changelog_url_old="https://raw.githubusercontent.com/kohler/gifsicle/refs/tags/v${{ env.GS_VERSION }}/NEWS"
-          changelog_url_new="${changelog_url_old}.md"
-          changelog_old="$(curl -s "$changelog_url_old" || echo "")"
-          changelog_new="$(curl -s "$changelog_url_new" || echo "")"
-          changelog="${changelog_old}${changelog_new}"
-          notes=$(echo "$changelog" | sed -n "/Version ${{ env.GS_VERSION }}/,/Version /{/Version ${{ env.GS_VERSION }}/b;/Version /b;p}")
-          echo "$notes" > NOTES.md
-
       - name: Publish version GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -299,7 +288,6 @@ jobs:
             ./*.tgz
           fail_on_unmatched_files: true
           preserve_order: true
-          body_path: ./NOTES.md
           prerelease: false
           draft: false
 
@@ -314,7 +302,6 @@ jobs:
             ./*.tgz
           fail_on_unmatched_files: true
           preserve_order: true
-          body_path: ./NOTES.md
           prerelease: false
           draft: false
           # TODO: make_latest: true
