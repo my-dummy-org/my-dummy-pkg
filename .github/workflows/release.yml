@@ -91,6 +91,7 @@ env:
   GS_WASM_FILENAME: ${{ inputs.gifsicle-wasm-filename || github.event.inputs.gifsicle-wasm-filename }}
   GS_JS_ARTIFACT_NAME: ${{ inputs.gifsicle-js-artifact-name || github.event.inputs.gifsicle-js-artifact-name }}
   GS_WASM_ARTIFACT_NAME: ${{ inputs.gifsicle-wasm-artifact-name || github.event.inputs.gifsicle-wasm-artifact-name}}
+  OUTPUT_FOLDER_PATH: './dist'
   VERSION_BRANCH_PREFIX: 'version/v'
   NODE_VERSION: '24.5.0'
 
@@ -206,22 +207,22 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: ${{ env.GS_JS_ARTIFACT_NAME }}
-          path: ./dist
+          path: ${{ env.OUTPUT_FOLDER_PATH }}
 
       - name: Check JS artifact downloaded exist
         shell: bash
-        run: test -f ./dist/${{ env.GS_JS_FILENAME }} || exit 1
+        run: test -f ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_JS_FILENAME }} || exit 1
 
       - name: Download WASM artifact
         id: download-wasm
         uses: actions/download-artifact@v6
         with:
           name: ${{ env.GS_WASM_ARTIFACT_NAME }}
-          path: ./dist
+          path: ${{ env.OUTPUT_FOLDER_PATH }}
 
       - name: Check WASM artifact downloaded exist
         shell: bash
-        run: test -f ./dist/${{ env.GS_WASM_FILENAME }} || exit 1
+        run: test -f ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_WASM_FILENAME }} || exit 1
 
       # bump version in files
 
@@ -271,10 +272,17 @@ jobs:
         run: git push origin ${{ env.VERSION_BRANCH_PREFIX }}${{ env.GS_SEMVER_VERSION }} --follow-tags
 
       # make GitHub release
-      # TODO: requires a tag
-      # TODO: move to publish (triggered by tag so release will be created for each which is good)
+
+      - name: Fetch changelog
+        id: changelog
+        shell: bash
+        run: |
+          changelog_url=https://raw.githubusercontent.com/kohler/gifsicle/refs/tags/v${{ env.GS_VERSION }}/NEWS
+          notes=$(curl -s "$changelog_url" | sed -n "/Version ${{ env.GS_VERSION }}/,/Version /{/Version ${{ env.GS_VERSION }}/b;/Version /b;p}")
+          echo "notes=$notes" >> $GITHUB_OUTPUT
 
       - name: Create tarball
+        shell: bash
         run: npm pack
 
       - name: Publish version GitHub release
@@ -282,10 +290,13 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           tag_name: 'v${{ env.GS_VERSION }}'
-          files: ./*.tgz
+          files: |
+            ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_JS_FILENAME }}
+            ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_WASM_FILENAME }}
+            ./*.tgz
           fail_on_unmatched_files: true
           preserve_order: true
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.notes }}
           prerelease: false
           draft: false
 
@@ -294,10 +305,13 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           tag_name: 'v${{ env.GS_SEMVER_VERSION }}'
-          files: ./*.tgz
+          files: |
+            ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_JS_FILENAME }}
+            ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_WASM_FILENAME }}
+            ./*.tgz
           fail_on_unmatched_files: true
           preserve_order: true
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.notes }}
           prerelease: false
           draft: false
           # TODO: make_latest: true
