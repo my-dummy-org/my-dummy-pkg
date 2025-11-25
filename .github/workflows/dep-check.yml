@@ -347,7 +347,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Fetch changelog notes
-        id: changelog
         shell: bash
         run: |
           changelog_url_old="https://raw.githubusercontent.com/kohler/gifsicle/refs/tags/v${{ env.GS_VERSION }}/NEWS"
@@ -356,11 +355,8 @@ jobs:
           changelog_new="$(curl -s "$changelog_url_new" || echo "")"
           changelog="${changelog_old}${changelog_new}"
           notes=$(echo "$changelog" | sed -n "/Version ${{ env.GS_VERSION }}/,/Version /{/Version ${{ env.GS_VERSION }}/b;/Version /b;p}")
-          echo "notes=$notes" >> $GITHUB_OUTPUT
+          echo "$notes" > NOTES.md
 
       - name: Check changelog notes exist
-        if: |
-          steps.changelog.outputs.notes == null ||
-          steps.changelog.outputs.notes == ''
         shell: bash
-        run: exit 1
+        run: test ! -s NOTES.md && exit 1

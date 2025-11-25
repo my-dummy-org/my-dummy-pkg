@@ -273,8 +273,11 @@ jobs:
 
       # make GitHub release
 
+      - name: Create tarball
+        shell: bash
+        run: npm pack
+
       - name: Fetch changelog notes
-        id: changelog
         shell: bash
         run: |
           changelog_url_old="https://raw.githubusercontent.com/kohler/gifsicle/refs/tags/v${{ env.GS_VERSION }}/NEWS"
@@ -283,11 +286,7 @@ jobs:
           changelog_new="$(curl -s "$changelog_url_new" || echo "")"
           changelog="${changelog_old}${changelog_new}"
           notes=$(echo "$changelog" | sed -n "/Version ${{ env.GS_VERSION }}/,/Version /{/Version ${{ env.GS_VERSION }}/b;/Version /b;p}")
-          echo "notes=$notes" >> $GITHUB_OUTPUT
-
-      - name: Create tarball
-        shell: bash
-        run: npm pack
+          echo "$notes" > NOTES.md
 
       - name: Publish version GitHub release
         uses: softprops/action-gh-release@v2
@@ -300,7 +299,7 @@ jobs:
             ./*.tgz
           fail_on_unmatched_files: true
           preserve_order: true
-          body: ${{ steps.changelog.outputs.notes }}
+          body_path: ./NOTES.md
           prerelease: false
           draft: false
 
@@ -315,7 +314,7 @@ jobs:
             ./*.tgz
           fail_on_unmatched_files: true
           preserve_order: true
-          body: ${{ steps.changelog.outputs.notes }}
+          body_path: ./NOTES.md
           prerelease: false
           draft: false
           # TODO: make_latest: true
