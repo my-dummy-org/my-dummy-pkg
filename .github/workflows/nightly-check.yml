@@ -49,7 +49,7 @@ jobs:
         shell: bash
         run: |
           echo "tag=$(git ls-remote --tags https://github.com/${{ github.repository }}.git \
-            refs/tags/v${{ steps.gifsicle-latest-tag.outputs.tag }} \
+            refs/tags/${{ steps.gifsicle-latest-tag.outputs.tag }} \
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
 
