@@ -1,4 +1,5 @@
 name: Build
+description: Compiles build artifacts
 
 on:
   workflow_call:

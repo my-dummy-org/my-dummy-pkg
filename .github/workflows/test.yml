@@ -1,4 +1,5 @@
-name: Check dependencies
+name: Test
+description: Performs release and publish checks
 
 on:
   workflow_call:
