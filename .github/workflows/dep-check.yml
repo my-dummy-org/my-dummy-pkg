@@ -302,7 +302,7 @@ jobs:
         run: exit 1
 
   has-github-bot-app-vars:
-    name: Check has all GitHub bot app varaibles
+    name: Check has all GitHub bot app variables
     runs-on: ubuntu-latest
     steps:
       - name: Prepare GitHub bot app credentials
