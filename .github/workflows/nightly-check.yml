@@ -1,4 +1,5 @@
-name: Nightly check for new version
+name: Nightly check
+description: Checks for new gifsicle git tag release every midnight
 
 on:
   workflow_dispatch:
@@ -17,7 +18,7 @@ on:
   #   - cron: '0 0 * * *' # runs every day at 00:00 UTC (midnight)
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
   packages: write
 
@@ -27,11 +28,11 @@ env:
   PATCH_VERSION: ${{ github.event.inputs.patch-version || '0' }}
 
 jobs:
-  new-version-check:
-    name: Check gifsicle new version
+  latest-version:
+    name: Check gifsicle new git tag released
     runs-on: ubuntu-latest
     steps:
-      - name: Get latest gifsicle tag
+      - name: Get latest gifsicle git tag
         id: gifsicle-latest-tag
         shell: bash
         run: |
@@ -40,9 +41,11 @@ jobs:
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
 
-      # TODO: Does not check for semver tag form (use both when publishing)
-      - name: Get own gifsicle tag
+      - name: Try to get own gifsicle latest git tag
         id: gifsicle-own-tag
+        if: |
+          steps.gifsicle-latest-tag.outputs.tag != null &&
+          steps.gifsicle-latest-tag.outputs.tag != ''
         shell: bash
         run: |
           echo "tag=$(git ls-remote --tags https://github.com/${{ github.repository }}.git \
@@ -50,9 +53,12 @@ jobs:
             | grep -o 'refs/tags/.*' \
             | cut -d/ -f3)" >> $GITHUB_OUTPUT
 
-      - name: Tag to version
+      - name: Convert tag to version number
         id: gifsicle-latest-version
-        if: ${{ steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag }}
+        if: |
+          steps.gifsicle-latest-tag.outputs.tag != null &&
+          steps.gifsicle-latest-tag.outputs.tag != '' &&
+          steps.gifsicle-latest-tag.outputs.tag != steps.gifsicle-own-tag.outputs.tag
         shell: bash
         run: |
           tag="${{ steps.gifsicle-latest-tag.outputs.tag }}"
@@ -62,9 +68,14 @@ jobs:
     outputs:
       gifsicle-version: ${{ steps.gifsicle-latest-version.outputs.version }}
 
+  # Required to use env in reusable local workflow
   env-to-outputs:
+    name: Convert env to outputs
+    needs: latest-version
+    if: |
+      needs.latest-version.outputs.gifsicle-version != null &&
+      needs.latest-version.outputs.gifsicle-version != ''
     runs-on: ubuntu-latest
-    needs: new-version-check
     outputs:
       emscripten-version: ${{ env.EM_VERSION }}
       patch-version: ${{ env.PATCH_VERSION }}
@@ -76,8 +87,11 @@ jobs:
   call-release:
     name: Release
     needs:
-      - new-version-check
+      - latest-version
       - env-to-outputs
+    if: |
+      needs.latest-version.outputs.gifsicle-version != null &&
+      needs.latest-version.outputs.gifsicle-version != ''
     uses: ./.github/workflows/release.yml
     permissions:
       contents: write
@@ -85,6 +99,7 @@ jobs:
       packages: write
     secrets: inherit
     with:
-      gifsicle-version: ${{ needs.new-version-check.outputs.gifsicle-version }}
+      is-latest: true
+      gifsicle-version: ${{ needs.latest-version.outputs.gifsicle-version }}
       emscripten-version: ${{ needs.env-to-outputs.outputs.emscripten-version }}
       patch-version: ${{ needs.env-to-outputs.outputs.patch-version }}

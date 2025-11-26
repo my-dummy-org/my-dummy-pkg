@@ -3,6 +3,11 @@ name: Release
 on:
   workflow_call:
     inputs:
+      is-latest:
+        description: 'Make this release latest'
+        required: true
+        type: boolean
+        default: false
       gifsicle-version:
         description: 'Gifsicle version to use'
         required: true
@@ -41,6 +46,11 @@ on:
 
   workflow_dispatch:
     inputs:
+      is-latest:
+        description: 'Make this release latest'
+        required: true
+        type: boolean
+        default: false
       gifsicle-version:
         description: 'Gifsicle version to use'
         required: true
@@ -83,6 +93,7 @@ permissions:
   packages: write
 
 env:
+  IS_LATEST: ${{ inputs.is-latest|| github.event.inputs.is-latest }}
   EM_VERSION: ${{ inputs.emscripten-version || github.event.inputs.emscripten-version }}
   GS_VERSION: ${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}
   GS_SEMVER_VERSION: '${{ inputs.gifsicle-version || github.event.inputs.gifsicle-version }}.${{ inputs.patch-version || github.event.inputs.patch-version }}'
@@ -282,6 +293,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           tag_name: 'v${{ env.GS_VERSION }}'
+          make_latest: false
           files: |
             ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_JS_FILENAME }}
             ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_WASM_FILENAME }}
@@ -296,6 +308,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           tag_name: 'v${{ env.GS_SEMVER_VERSION }}'
+          make_latest: ${{ env.IS_LATEST }}
           files: |
             ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_JS_FILENAME }}
             ${{ env.OUTPUT_FOLDER_PATH }}/${{ env.GS_WASM_FILENAME }}
@@ -304,9 +317,9 @@ jobs:
           preserve_order: true
           prerelease: false
           draft: false
-          # TODO: make_latest: true
 
-      # ? Delete branch (optional)
       # TODO: Handle latest merge to main? (requires PR)
-      # TODO: Add tag push trigger to publish to registries (npm + GitHub)
-      # ! only trigger on semver tag
+      # TODO: Handle publish to registries (npm + GitHub)
+      # ! only semver
+      # ? use tag push event?
+      # ? or pass tag and build artifacts directly from this workflow?
