@@ -1,4 +1,5 @@
 name: Release
+description: Creates version branch with build artifacts with assigned version tag and published github release
 
 on:
   workflow_call:
@@ -126,7 +127,7 @@ jobs:
   call-dep-check:
     name: Run dependency checks
     needs: env-to-outputs
-    uses: ./.github/workflows/dep-check.yml
+    uses: ./.github/workflows/test.yml
     permissions:
       contents: read
       id-token: write
