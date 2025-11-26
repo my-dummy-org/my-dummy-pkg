@@ -53,7 +53,7 @@ env:
 jobs:
   has-inputs:
     name: Check inputs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Check gifsicle version
         if: |
@@ -78,7 +78,7 @@ jobs:
 
   has-gifsicle-version-tag:
     name: Check gifsicle version tag exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: List gifsicle version tag
         shell: bash
@@ -89,7 +89,7 @@ jobs:
 
   has-emscripten-version-tag:
     name: Check Emscripten version tag exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: List Emscripten version tag
         shell: bash
@@ -100,7 +100,7 @@ jobs:
 
   has-no-own-version-tag:
     name: Check no own version tag exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: List own version tag
         shell: bash
@@ -111,7 +111,7 @@ jobs:
 
   has-no-own-semver-tag:
     name: Check no own semver tag exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: List own semver tag
         shell: bash
@@ -122,7 +122,7 @@ jobs:
 
   has-no-own-version-release:
     name: Check no own GitHub version release exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: List own GitHub version release
         env:
@@ -133,7 +133,7 @@ jobs:
 
   has-no-own-semver-release:
     name: Check no own GitHub semver release exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: List own GitHub semver release
         env:
@@ -144,7 +144,7 @@ jobs:
 
   can-set-package-version:
     name: Check can set package version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -160,7 +160,7 @@ jobs:
 
   can-pack-tarball:
     name: Check can pack tarball package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -180,7 +180,7 @@ jobs:
 
   has-no-npm-registry-version:
     name: Check semver not published to npm registry
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -206,7 +206,7 @@ jobs:
 
   can-npm-registry-publish:
     name: Check can publish to npm registry
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -228,7 +228,7 @@ jobs:
 
   has-no-github-registry-version:
     name: Check semver not published to GitHub registry
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -256,7 +256,7 @@ jobs:
 
   can-github-registry-publish:
     name: Check can publish to GitHub registry
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -280,7 +280,7 @@ jobs:
 
   has-gpg:
     name: Check has GPG signing key
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -303,7 +303,7 @@ jobs:
 
   has-github-bot-app-vars:
     name: Check has all GitHub bot app variables
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Prepare GitHub bot app credentials
         uses: actions/create-github-app-token@v2

@@ -30,7 +30,7 @@ env:
 jobs:
   latest-version:
     name: Check gifsicle new git tag released
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Get latest gifsicle git tag
         id: gifsicle-latest-tag
@@ -75,14 +75,14 @@ jobs:
     if: |
       needs.latest-version.outputs.gifsicle-version != null &&
       needs.latest-version.outputs.gifsicle-version != ''
-    runs-on: ubuntu-latest
-    outputs:
-      emscripten-version: ${{ env.EM_VERSION }}
-      patch-version: ${{ env.PATCH_VERSION }}
+    runs-on: ubuntu-slim
     steps:
       # Jobs require at least one step
       - name: Print
         run: echo "Converting env to outputs"
+    outputs:
+      emscripten-version: ${{ env.EM_VERSION }}
+      patch-version: ${{ env.PATCH_VERSION }}
 
   call-release:
     name: Release
