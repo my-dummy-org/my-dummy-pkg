@@ -108,7 +108,7 @@ env:
 
 jobs:
   env-to-outputs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     outputs:
       gifsicle-version: ${{ env.GS_VERSION }}
       emscripten-version: ${{ env.EM_VERSION }}
@@ -154,13 +154,13 @@ jobs:
       gifsicle-js-artifact-name: ${{ needs.env-to-outputs.outputs.gifsicle-js-artifact-name }}
       gifsicle-wasm-artifact-name: ${{ needs.env-to-outputs.outputs.gifsicle-wasm-artifact-name }}
 
-  bump-version:
-    name: Bump version
+  bump-release:
+    name: Bump release
     needs:
       - env-to-outputs
       - call-dep-check
       - call-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Prepare GitHub bot app credentials
         uses: actions/create-github-app-token@v2
